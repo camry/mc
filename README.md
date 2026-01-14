@@ -1,3 +1,3 @@
 # mc
 
-mongo collector
+Mongo Collector
