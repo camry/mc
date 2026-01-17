@@ -1,22 +1,71 @@
 package mc_test
 
 import (
+    "errors"
     "testing"
+    "time"
+
+    "github.com/camry/g/glog"
+    "github.com/stretchr/testify/assert"
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/bsonrw"
+    "go.mongodb.org/mongo-driver/mongo"
 
     "github.com/camry/mc"
 )
 
 type A struct {
-    mc.MessageTop[int64]
+    mc.MessageTop[*A, int64]
 
+    _id       int64
     aUsername string
+    ids       *mc.ListBase[int32]
     b         *B
 }
 
-func newA(adapter mc.IAdapter[int64], k int64) *A {
+var aDecode = mc.Register(&A{},
+    mc.NewDecodePair("_id", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *A) (err error) {
+        v._id, err = mc.Int64Decode(vr)
+        return
+    })),
+    mc.NewDecodePair("aUsername", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *A) (err error) {
+        v.aUsername, err = mc.StringDecode(vr)
+        return
+    })),
+    mc.NewDecodePair("ids", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *A) (err error) {
+        v.ids = mc.NewListBase[int32](v, "ids")
+        err = v.ids.Decode(vr, v.ids)
+        return
+    })),
+    mc.NewDecodePair("b", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *A) (err error) {
+        v.b = newB(v, "b")
+        err = bDecode.Decode(vr, v.b)
+        return
+    })),
+)
+
+func NewA(adapter mc.IAdapter[*A, int64], k int64) *A {
     x := &A{}
-    x.Bind(adapter, k)
+    x._id = k
+    x.Bind(adapter, x, k)
     return x
+}
+
+func (a *A) Table() string {
+    return "users"
+}
+
+func (a *A) Marshal() bson.M {
+    m := make(bson.M)
+    m["_id"] = a.Key()
+    m["aUsername"] = a.GetAUsername()
+    m["ids"] = a.GetIds().Marshal()
+    m["b"] = a.GetB().Marshal()
+    return m
+}
+
+func (a *A) Unmarshal(bsonM bson.M) error {
+    return nil
 }
 
 func (a *A) GetAUsername() string {
@@ -25,7 +74,14 @@ func (a *A) GetAUsername() string {
 
 func (a *A) SetAUsername(username string) {
     a.aUsername = username
-    a.Collect(a, "aUsername", username)
+    a.Set(a, "aUsername", username)
+}
+
+func (a *A) GetIds() *mc.ListBase[int32] {
+    if a.ids == nil {
+        a.ids = mc.NewListBase[int32](a, "ids")
+    }
+    return a.ids
 }
 
 func (a *A) GetB() *B {
@@ -42,10 +98,33 @@ type B struct {
     c         *C
 }
 
+var bDecode = mc.Register(&B{},
+    mc.NewDecodePair("bUsername", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *B) (err error) {
+        v.bUsername, err = mc.StringDecode(vr)
+        return
+    })),
+    mc.NewDecodePair("c", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *B) (err error) {
+        v.c = newC(v, "c")
+        err = cDecode.Decode(vr, v.c)
+        return
+    })),
+)
+
 func newB(parent mc.IMessage, key any) *B {
     x := &B{}
     x.Bind(parent, key)
     return x
+}
+
+func (b *B) Marshal() bson.M {
+    m := make(bson.M)
+    m["bUsername"] = b.GetBUsername()
+    m["c"] = b.GetC().Marshal()
+    return m
+}
+
+func (b *B) Unmarshal(bsonM bson.M) error {
+    return nil
 }
 
 func (b *B) GetBUsername() string {
@@ -54,7 +133,7 @@ func (b *B) GetBUsername() string {
 
 func (b *B) SetBUsername(username string) {
     b.bUsername = username
-    b.Collect(b, "bUsername", username)
+    b.Set(b, "bUsername", username)
 }
 
 func (b *B) GetC() *C {
@@ -71,6 +150,29 @@ type C struct {
     d         *D
 }
 
+var cDecode = mc.Register(&C{},
+    mc.NewDecodePair("cUsername", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
+        v.cUsername, err = mc.StringDecode(vr)
+        return
+    })),
+    mc.NewDecodePair("d", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
+        v.d = newD(v, "d")
+        err = dDecode.Decode(vr, v.d)
+        return
+    })),
+)
+
+func (c *C) Marshal() bson.M {
+    m := make(bson.M)
+    m["cUsername"] = c.GetCUsername()
+    m["d"] = c.GetD().Marshal()
+    return m
+}
+
+func (c *C) Unmarshal(bsonM bson.M) error {
+    return nil
+}
+
 func newC(parent mc.IMessage, key any) *C {
     x := &C{}
     x.Bind(parent, key)
@@ -83,7 +185,7 @@ func (c *C) GetCUsername() string {
 
 func (c *C) SetCUsername(username string) {
     c.cUsername = username
-    c.Collect(c, "cUsername", username)
+    c.Set(c, "cUsername", username)
 }
 
 func (c *C) GetD() *D {
@@ -97,6 +199,30 @@ type D struct {
     mc.MessageSub
 
     dUsername string
+    tags      *mc.ListBase[string]
+}
+
+var dDecode = mc.Register(&D{},
+    mc.NewDecodePair("dUsername", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.dUsername, err = mc.StringDecode(vr)
+        return
+    })),
+    mc.NewDecodePair("tags", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.tags = mc.NewListBase[string](v, "tags")
+        err = v.tags.Decode(vr, v.tags)
+        return
+    })),
+)
+
+func (d *D) Marshal() bson.M {
+    m := make(bson.M)
+    m["dUsername"] = d.GetDUsername()
+    m["tags"] = d.GetTags().Marshal()
+    return m
+}
+
+func (d *D) Unmarshal(bsonM bson.M) error {
+    return nil
 }
 
 func newD(parent mc.IMessage, key any) *D {
@@ -111,11 +237,43 @@ func (d *D) GetDUsername() string {
 
 func (d *D) SetDUsername(username string) {
     d.dUsername = username
-    d.Collect(d, "dUsername", username)
+    d.Set(d, "dUsername", username)
 }
 
-func TestAdapter_Collect(t *testing.T) {
-    adapter := mc.NewAdapter[int64](1)
-    a := newA(adapter, 1)
-    a.GetB().GetC().GetD().SetDUsername("camry")
+func (d *D) GetTags() *mc.ListBase[string] {
+    if d.tags == nil {
+        d.tags = mc.NewListBase[string](d, "tags")
+    }
+    return d.tags
+}
+
+func TestAdapter_Set(t *testing.T) {
+    db, err := defaultDB("treasure-user")
+    assert.Nil(t, err)
+    assert.Equal(t, "treasure-user", db.Name())
+
+    adapter := mc.NewAdapter[*A, int64](db)
+    a := NewA(adapter, 2)
+
+    decode, err := mc.GetDecode(&A{})
+    assert.Nil(t, err)
+    bsonRaw, err := db.Collection(a.Table()).FindOne(db.Context(), bson.M{"_id": a.Key()}).Raw()
+    if errors.Is(err, mongo.ErrNoDocuments) {
+        db.Collection(a.Table()).InsertOne(db.Context(), a.Marshal())
+    } else {
+        assert.Nil(t, err)
+    }
+    err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
+    assert.Nil(t, err)
+
+    a.GetIds().Remove(1)
+    a.GetIds().Remove(2)
+    a.GetIds().Remove(5)
+    a.GetIds().Remove(1)
+    a.GetIds().Remove(2)
+    a.GetIds().Remove(5)
+    a.GetB().GetC().GetD().GetTags().Remove("tag1")
+
+    time.Sleep(time.Second * 2)
+    glog.Infof("Marshal %v", a.Marshal())
 }

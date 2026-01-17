@@ -1,11 +1,20 @@
 package mc
 
 import (
+    "reflect"
     "strings"
 
     "github.com/camry/g/glog"
     "github.com/spf13/cast"
 )
+
+func GetStructName(i any) string {
+    t := reflect.TypeOf(i)
+    for t.Kind() == reflect.Ptr {
+        t = t.Elem()
+    }
+    return t.Name()
+}
 
 func toNestedMessageFieldKey(nestedMessages []IMessage, key any) string {
     if len(nestedMessages) > 0 {
@@ -31,8 +40,8 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
         switch message.MessageType() {
         case MessageTypeSub:
             builder.WriteString(cast.ToString(message.Key()))
-        case MessageTypeMapBase, MessageTypeMapNested:
-            glog.Errorf("MessageTypeMapBase or MessageTypeMapNested error: %v", message.MessageType())
+        case MessageTypeMapBase, MessageTypeMapMessage:
+            glog.Errorf("MessageTypeMapBase or MessageTypeMapMessage error: %v", message.MessageType())
         default:
             glog.Errorf("message type error: %v", message.MessageType())
         }

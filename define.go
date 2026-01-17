@@ -1,32 +1,58 @@
 package mc
 
+import (
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/bsonrw"
+    "golang.org/x/exp/constraints"
+)
+
 type MessageType int8
 
 const (
     MessageTypeTop MessageType = iota
     MessageTypeSub
-    MessageTypeList
+    MessageTypeListBase
+    MessageTypeListMessage
     MessageTypeMapBase
-    MessageTypeMapNested
+    MessageTypeMapMessage
 )
 
-type IAdapter[K comparable] interface {
-    Collect(k K, nestedMessages []IMessage, key, val any)
+type ListBaseType interface {
+    ~int32 | ~int64 | constraints.Float | ~string
+}
+
+type IMarshalBsonM interface {
+    Marshal() bson.M
+    Unmarshal(bsonM bson.M) error
+}
+
+type IAdapter[T IMessageTop, K comparable] interface {
+    Bind(t T, k K)
+    GetMessageTop() T
+    GetKey() K
+    Set(topMessage IMessageTop, nestedMessages []IMessage, key, val any)
+    Unset(topMessage IMessageTop, nestedMessages []IMessage, key any)
 }
 
 type IMessage interface {
     MessageType() MessageType
     Key() any
-    Collect(self IMessage, key, val any, nestedMessages ...IMessage)
-    Delete(self IMessage, key any)
+    Set(self IMessage, key, val any, nestedMessages ...IMessage)
+    Unset(self IMessage, key any, nestedMessages ...IMessage)
 }
 
 type IMessageTop interface {
     IMessage
+    IMarshalBsonM
+
+    Table() string
 }
 
 type IMessageSub interface {
     IMessage
+    IMarshalBsonM
+}
 
-    ParentMessage() IMessage
+type IDecode interface {
+    Decode(vr bsonrw.ValueReader, v any) error
 }

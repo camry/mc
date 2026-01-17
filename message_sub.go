@@ -1,7 +1,5 @@
 package mc
 
-import "github.com/camry/g/glog"
-
 type MessageSub struct {
     parent IMessage
     key    any
@@ -15,17 +13,14 @@ func (m *MessageSub) Key() any {
     return m.key
 }
 
-func (m *MessageSub) Collect(self IMessage, key, val any, nestedMessages ...IMessage) {
+func (m *MessageSub) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
     nestedMessages = append(nestedMessages, m)
-    m.ParentMessage().Collect(m.parent, key, val, nestedMessages...)
+    m.parent.Set(m.parent, key, val, nestedMessages...)
 }
 
-func (m *MessageSub) Delete(self IMessage, key any) {
-    glog.Fatalf("MessageSub Delete Not Impl")
-}
-
-func (m *MessageSub) ParentMessage() IMessage {
-    return m.parent
+func (m *MessageSub) Unset(self IMessage, key any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, m)
+    m.parent.Unset(m.parent, key, nestedMessages...)
 }
 
 func (m *MessageSub) Bind(parent IMessage, key any) {
