@@ -60,7 +60,11 @@ func (x *List[T]) ForEach(fn func(index int, item T)) {
 func (x *List[T]) Append(item T) {
     key := fmt.Sprintf("%s.%d", x.key, len(x.v))
     x.v = append(x.v, item)
-    x.parent.Set(x.parent, key, item)
+    if v, ok := any(item).(IMarshalBsonM); ok {
+        x.parent.Set(x.parent, key, v.Marshal())
+    } else {
+        x.parent.Set(x.parent, key, item)
+    }
 }
 
 func (x *List[T]) Remove(index int) {

@@ -36,6 +36,10 @@ func (x *ListMessage[T]) Set(self IMessage, key, val any, nestedMessages ...IMes
 func (x *ListMessage[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
 }
 
+func (x *ListMessage[T]) NewMessage() T {
+    return x.creator(x, nil)
+}
+
 func (x *ListMessage[T]) Decode(vr bsonrw.ValueReader, _ any) error {
     if vr.Type() == bson.TypeArray {
         arr, err := vr.ReadArray()

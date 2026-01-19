@@ -3,6 +3,7 @@ package mc_test
 import (
     "errors"
     "testing"
+    "time"
 
     "github.com/camry/g/glog"
     "github.com/stretchr/testify/assert"
@@ -279,7 +280,14 @@ func TestAdapter_Set(t *testing.T) {
     err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
     assert.Nil(t, err)
 
-    // a.GetB().GetC().GetDList().Append()
+    dList := a.GetB().GetC().GetDList()
+    item := dList.NewMessage()
+    item.SetDUsername("jimmy1")
+    item.GetTags().Append("Jimmy1Tag1")
+    item.GetTags().Append("Jimmy1Tag2")
+    dList.Append(item)
+
+    time.Sleep(time.Second)
 
     glog.Infof("Marshal %v", a.Marshal())
 }
