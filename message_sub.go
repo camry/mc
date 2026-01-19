@@ -5,25 +5,25 @@ type MessageSub struct {
     key    any
 }
 
-func (m *MessageSub) MessageType() MessageType {
+func (x *MessageSub) MessageType() MessageType {
     return MessageTypeSub
 }
 
-func (m *MessageSub) Key() any {
-    return m.key
+func (x *MessageSub) Key() any {
+    return x.key
 }
 
-func (m *MessageSub) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, m)
-    m.parent.Set(m.parent, key, val, nestedMessages...)
+func (x *MessageSub) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x)
+    x.parent.Set(x.parent, key, val, nestedMessages...)
 }
 
-func (m *MessageSub) Unset(self IMessage, key any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, m)
-    m.parent.Unset(m.parent, key, nestedMessages...)
+func (x *MessageSub) Unset(self IMessage, key any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x)
+    x.parent.Unset(x.parent, key, nestedMessages...)
 }
 
-func (m *MessageSub) Bind(parent IMessage, key any) {
-    m.parent = parent
-    m.key = key
+func (x *MessageSub) Bind(parent IMessage, key any) {
+    x.parent = parent
+    x.key = key
 }
