@@ -71,7 +71,11 @@ func (x *List[T]) Remove(index int) {
 func (x *List[T]) Marshal() bson.A {
     a := bson.A{}
     for _, v := range x.v {
-        a = append(a, v)
+        if vv, ok := any(v).(IMarshalBsonM); ok {
+            a = append(a, vv.Marshal())
+        } else {
+            a = append(a, v)
+        }
     }
     return a
 }

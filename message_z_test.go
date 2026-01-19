@@ -161,7 +161,7 @@ var cDecode = mc.Register(&C{},
         return
     })),
     mc.NewDecodePair("dList", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
-        v.dList = mc.NewListMessage[*D](v, "dList")
+        v.dList = mc.NewListMessage[*D](v, "dList", newD)
         err = v.dList.Decode(vr, v.dList)
         return
     })),
@@ -171,6 +171,7 @@ func (c *C) Marshal() bson.M {
     m := make(bson.M)
     m["cUsername"] = c.GetCUsername()
     m["d"] = c.GetD().Marshal()
+    m["dList"] = c.GetDList().Marshal()
     return m
 }
 
@@ -202,7 +203,7 @@ func (c *C) GetD() *D {
 
 func (c *C) GetDList() *mc.ListMessage[*D] {
     if c.dList == nil {
-        c.dList = mc.NewListMessage[*D](c, "dList")
+        c.dList = mc.NewListMessage[*D](c, "dList", newD)
     }
     return c.dList
 }
@@ -277,6 +278,8 @@ func TestAdapter_Set(t *testing.T) {
     }
     err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
     assert.Nil(t, err)
+
+    // a.GetB().GetC().GetDList().Append()
 
     glog.Infof("Marshal %v", a.Marshal())
 }

@@ -25,6 +25,20 @@ func NewListBase[T ListBaseType](parent IMessage, key string) *ListBase[T] {
     }
 }
 
+func (x *ListBase[T]) MessageType() MessageType {
+    return MessageTypeListBase
+}
+
+func (x *ListBase[T]) Key() any {
+    return x.key
+}
+
+func (x *ListBase[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
+}
+
+func (x *ListBase[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
+}
+
 func (x *ListBase[T]) Remove(item T) {
     index := slices.Index(x.v, item)
     if index == -1 {
