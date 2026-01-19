@@ -3,7 +3,6 @@ package mc_test
 import (
     "errors"
     "testing"
-    "time"
 
     "github.com/camry/g/glog"
     "github.com/stretchr/testify/assert"
@@ -148,6 +147,7 @@ type C struct {
 
     cUsername string
     d         *D
+    dList     *mc.ListMessage[*D]
 }
 
 var cDecode = mc.Register(&C{},
@@ -158,6 +158,11 @@ var cDecode = mc.Register(&C{},
     mc.NewDecodePair("d", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
         v.d = newD(v, "d")
         err = dDecode.Decode(vr, v.d)
+        return
+    })),
+    mc.NewDecodePair("dList", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
+        v.dList = mc.NewListMessage[*D](v, "dList")
+        err = v.dList.Decode(vr, v.dList)
         return
     })),
 )
@@ -193,6 +198,13 @@ func (c *C) GetD() *D {
         c.d = newD(c, "d")
     }
     return c.d
+}
+
+func (c *C) GetDList() *mc.ListMessage[*D] {
+    if c.dList == nil {
+        c.dList = mc.NewListMessage[*D](c, "dList")
+    }
+    return c.dList
 }
 
 type D struct {
@@ -266,14 +278,5 @@ func TestAdapter_Set(t *testing.T) {
     err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
     assert.Nil(t, err)
 
-    a.GetIds().Remove(1)
-    a.GetIds().Remove(2)
-    a.GetIds().Remove(5)
-    a.GetIds().Remove(1)
-    a.GetIds().Remove(2)
-    a.GetIds().Remove(5)
-    a.GetB().GetC().GetD().GetTags().Remove("tag1")
-
-    time.Sleep(time.Second * 2)
     glog.Infof("Marshal %v", a.Marshal())
 }
