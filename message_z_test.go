@@ -284,7 +284,8 @@ func TestAdapter_Set(t *testing.T) {
     assert.Nil(t, err)
     bsonRaw, err := db.Collection(a.Table()).FindOne(db.Context(), bson.M{"_id": a.Key()}).Raw()
     if errors.Is(err, mongo.ErrNoDocuments) {
-        db.Collection(a.Table()).InsertOne(db.Context(), a.Marshal())
+        _, err1 := db.Collection(a.Table()).InsertOne(db.Context(), a.Marshal())
+        assert.Nil(t, err1)
     } else {
         assert.Nil(t, err)
     }
