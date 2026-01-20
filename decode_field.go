@@ -5,8 +5,7 @@ import "go.mongodb.org/mongo-driver/bson/bsonrw"
 // DecodeField 字段解码器结构体
 // T 解码的目标类型
 type DecodeField[T any] struct {
-    // handler 解码处理器函数
-    handler func(vr bsonrw.ValueReader, v T) error
+    handler func(vr bsonrw.ValueReader, v T) error // handler 解码处理器函数
 }
 
 // NewDecodeField 创建新的字段解码器

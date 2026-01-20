@@ -9,8 +9,7 @@ import (
 
 // DecodeMessage 消息解码器结构体
 type DecodeMessage struct {
-    // fieldMap 字段名称与解码器的映射
-    fieldMap map[string]IDecode
+    fieldMap map[string]IDecode // fieldMap 字段名称与解码器的映射
 }
 
 // NewDecodeMessage 创建新的消息解码器

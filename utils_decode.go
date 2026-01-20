@@ -28,13 +28,13 @@ func Float64Decode(vr bsonrw.ValueReader) (float64, error) {
         v, err := vr.ReadBoolean()
         return cast.ToFloat64(v), err
     case bson.TypeDouble:
-        return vr.ReadDouble() // 直接读取double
+        return vr.ReadDouble()
     case bson.TypeNull:
-        return 0, vr.ReadNull() // 读取null值
+        return 0, vr.ReadNull()
     case bson.TypeUndefined:
-        return 0, vr.ReadUndefined() // 读取undefined值
+        return 0, vr.ReadUndefined()
     default:
-        return 0, gerror.Newf("unexpected bson type %s for float64", vr.Type().String()) // 不支持的类型
+        return 0, gerror.Newf("unexpected bson type %s for float64", vr.Type().String())
     }
 }
 
@@ -53,7 +53,7 @@ func Int64Decode(vr bsonrw.ValueReader) (int64, error) {
         v, err := vr.ReadInt32()
         return cast.ToInt64(v), err
     case bson.TypeInt64:
-        return vr.ReadInt64() // 直接读取int64
+        return vr.ReadInt64()
     case bson.TypeBoolean:
         v, err := vr.ReadBoolean()
         return cast.ToInt64(v), err
@@ -61,11 +61,11 @@ func Int64Decode(vr bsonrw.ValueReader) (int64, error) {
         v, err := vr.ReadDouble()
         return cast.ToInt64(v), err
     case bson.TypeNull:
-        return 0, vr.ReadNull() // 读取null值
+        return 0, vr.ReadNull()
     case bson.TypeUndefined:
-        return 0, vr.ReadUndefined() // 读取undefined值
+        return 0, vr.ReadUndefined()
     default:
-        return 0, gerror.Newf("unexpected bson type %s for int64", vr.Type().String()) // 不支持的类型
+        return 0, gerror.Newf("unexpected bson type %s for int64", vr.Type().String())
     }
 }
 
@@ -88,9 +88,9 @@ func UInt64Decode(vr bsonrw.ValueReader) (uint64, error) {
 func BoolDecode(vr bsonrw.ValueReader) (bool, error) {
     switch vr.Type() {
     case bson.TypeBoolean:
-        return vr.ReadBoolean() // 直接读取布尔值
+        return vr.ReadBoolean()
     default:
-        return false, gerror.Newf("unexpected bson type %s for bool", vr.Type().String()) // 不支持的类型
+        return false, gerror.Newf("unexpected bson type %s for bool", vr.Type().String())
     }
 }
 
@@ -99,9 +99,9 @@ func BoolDecode(vr bsonrw.ValueReader) (bool, error) {
 func StringDecode(vr bsonrw.ValueReader) (string, error) {
     switch vr.Type() {
     case bson.TypeString:
-        return vr.ReadString() // 直接读取字符串
+        return vr.ReadString()
     default:
-        return "", gerror.Newf("unexpected bson type %s for string", vr.Type().String()) // 不支持的类型
+        return "", gerror.Newf("unexpected bson type %s for string", vr.Type().String())
     }
 }
 
@@ -110,9 +110,9 @@ func StringDecode(vr bsonrw.ValueReader) (string, error) {
 func BinaryDecode(vr bsonrw.ValueReader) ([]byte, error) {
     switch vr.Type() {
     case bson.TypeBinary:
-        v, _, err := vr.ReadBinary() // 直接读取二进制数据
+        v, _, err := vr.ReadBinary()
         return v, err
     default:
-        return nil, gerror.Newf("unexpected bson type %s for binary", vr.Type().String()) // 不支持的类型
+        return nil, gerror.Newf("unexpected bson type %s for binary", vr.Type().String())
     }
 }

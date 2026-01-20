@@ -10,7 +10,7 @@ import (
 // ListMessage 消息类型列表结构体，用于管理消息对象的列表
 // T 消息类型，必须实现IMessage接口
 type ListMessage[T IMessage] struct {
-    List[T]                                  // 继承List的所有方法
+    List[T]                                  // 继承 List 的所有方法
     creator func(parent IMessage, key any) T // 创建新消息对象的工厂函数
 }
 
