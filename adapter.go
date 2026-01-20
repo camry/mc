@@ -44,7 +44,7 @@ func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, k
             mk: val,
         },
     }
-    glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s", x.t.Table(), x.GetKey(), mk)
+    glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
 }
 
 func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage, key any) {
