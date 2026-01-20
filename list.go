@@ -1,7 +1,6 @@
 package mc
 
 import (
-    "fmt"
     "reflect"
     "slices"
 
@@ -12,6 +11,14 @@ type List[T any] struct {
     parent IMessage
     key    string
     v      []T
+}
+
+func (x *List[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
+    x.parent.Set(x.parent, key, val, nestedMessages...)
+}
+
+func (x *List[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
+    x.parent.Unset(x.parent, key, nestedMessages...)
 }
 
 func (x *List[T]) Len() int {
@@ -58,13 +65,8 @@ func (x *List[T]) ForEach(fn func(index int, item T)) {
 }
 
 func (x *List[T]) Append(item T) {
-    key := fmt.Sprintf("%s.%d", x.key, len(x.v))
     x.v = append(x.v, item)
-    if v, ok := any(item).(IMarshalBsonM); ok {
-        x.parent.Set(x.parent, key, v.Marshal())
-    } else {
-        x.parent.Set(x.parent, key, item)
-    }
+    x.parent.Set(x.parent, x.key, x.Marshal())
 }
 
 func (x *List[T]) Remove(index int) {

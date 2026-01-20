@@ -48,7 +48,13 @@ func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, k
 }
 
 func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage, key any) {
-    glog.Debugf("Adapter Unset Field Key:%s", toNestedMessageFieldKey(nestedMessages, key))
+    mk := toNestedMessageFieldKey(nestedMessages, key)
+    x.setData <- bson.M{
+        "$unset": bson.M{
+            mk: "",
+        },
+    }
+    glog.Debugf("Adapter Unset Field Key:%s", mk)
 }
 
 func (x *Adapter[T, K]) Consume() {

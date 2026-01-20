@@ -12,11 +12,11 @@ import (
     "go.mongodb.org/mongo-driver/bson/bsontype"
 )
 
-type ListBase[T ListBaseType] struct {
+type ListBase[T BaseType] struct {
     List[T]
 }
 
-func NewListBase[T ListBaseType](parent IMessage, key string) *ListBase[T] {
+func NewListBase[T BaseType](parent IMessage, key string) *ListBase[T] {
     return &ListBase[T]{
         List: List[T]{
             parent: parent,
@@ -35,20 +35,12 @@ func (x *ListBase[T]) Key() any {
 
 func (x *ListBase[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
     nestedMessages = append(nestedMessages, x)
-    x.parent.Set(x.parent, key, val, nestedMessages...)
+    x.List.Set(x.parent, key, val, nestedMessages...)
 }
 
 func (x *ListBase[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
     nestedMessages = append(nestedMessages, x)
-    x.parent.Unset(x.parent, key, nestedMessages...)
-}
-
-func (x *ListBase[T]) Remove(item T) {
-    index := slices.Index(x.v, item)
-    if index == -1 {
-        return
-    }
-    x.List.Remove(index)
+    x.List.Unset(x.parent, key, nestedMessages...)
 }
 
 func (x *ListBase[T]) Decode(vr bsonrw.ValueReader, _ any) error {
@@ -91,7 +83,7 @@ func (x *ListBase[T]) Decode(vr bsonrw.ValueReader, _ any) error {
             case reflect.String:
                 val, err2 = avr.ReadString()
             default:
-                err2 = gerror.Newf("unknow ListBaseType %s", kind)
+                err2 = gerror.Newf("unknow BaseType %s", kind)
             }
             if err2 != nil {
                 return err2
@@ -100,4 +92,12 @@ func (x *ListBase[T]) Decode(vr bsonrw.ValueReader, _ any) error {
         }
     }
     return nil
+}
+
+func (x *ListBase[T]) Remove(item T) {
+    index := slices.Index(x.v, item)
+    if index == -1 {
+        return
+    }
+    x.List.Remove(index)
 }

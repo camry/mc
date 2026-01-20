@@ -3,7 +3,6 @@ package mc_test
 import (
     "errors"
     "testing"
-    "time"
 
     "github.com/camry/g/glog"
     "github.com/stretchr/testify/assert"
@@ -64,10 +63,6 @@ func (a *A) Marshal() bson.M {
     return m
 }
 
-func (a *A) Unmarshal(bsonM bson.M) error {
-    return nil
-}
-
 func (a *A) GetAUsername() string {
     return a.aUsername
 }
@@ -123,10 +118,6 @@ func (b *B) Marshal() bson.M {
     return m
 }
 
-func (b *B) Unmarshal(bsonM bson.M) error {
-    return nil
-}
-
 func (b *B) GetBUsername() string {
     return b.bUsername
 }
@@ -149,6 +140,8 @@ type C struct {
     cUsername string
     d         *D
     dList     *mc.ListMessage[*D]
+    tagMap    *mc.MapBase[string, int32]
+    dMap      *mc.MapMessage[string, *D]
 }
 
 var cDecode = mc.Register(&C{},
@@ -166,6 +159,16 @@ var cDecode = mc.Register(&C{},
         err = v.dList.Decode(vr, v.dList)
         return
     })),
+    mc.NewDecodePair("tagMap", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
+        v.tagMap = mc.NewMapBase[string, int32](v, "tagMap")
+        err = v.tagMap.Decode(vr, v.tagMap)
+        return
+    })),
+    mc.NewDecodePair("dMap", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
+        v.dMap = mc.NewMapMessage[string, *D](v, "dMap", newD)
+        err = v.dMap.Decode(vr, v.dMap)
+        return
+    })),
 )
 
 func (c *C) Marshal() bson.M {
@@ -173,11 +176,9 @@ func (c *C) Marshal() bson.M {
     m["cUsername"] = c.GetCUsername()
     m["d"] = c.GetD().Marshal()
     m["dList"] = c.GetDList().Marshal()
+    m["tagMap"] = c.GetTagMap().Marshal()
+    m["dMap"] = c.GetDMap().Marshal()
     return m
-}
-
-func (c *C) Unmarshal(bsonM bson.M) error {
-    return nil
 }
 
 func newC(parent mc.IMessage, key any) *C {
@@ -209,6 +210,20 @@ func (c *C) GetDList() *mc.ListMessage[*D] {
     return c.dList
 }
 
+func (c *C) GetTagMap() *mc.MapBase[string, int32] {
+    if c.tagMap == nil {
+        c.tagMap = mc.NewMapBase[string, int32](c, "tagMap")
+    }
+    return c.tagMap
+}
+
+func (c *C) GetDMap() *mc.MapMessage[string, *D] {
+    if c.dMap == nil {
+        c.dMap = mc.NewMapMessage[string, *D](c, "dMap", newD)
+    }
+    return c.dMap
+}
+
 type D struct {
     mc.MessageSub
 
@@ -233,10 +248,6 @@ func (d *D) Marshal() bson.M {
     m["dUsername"] = d.GetDUsername()
     m["tags"] = d.GetTags().Marshal()
     return m
-}
-
-func (d *D) Unmarshal(bsonM bson.M) error {
-    return nil
 }
 
 func newD(parent mc.IMessage, key any) *D {
@@ -279,20 +290,6 @@ func TestAdapter_Set(t *testing.T) {
     }
     err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
     assert.Nil(t, err)
-
-    dList := a.GetB().GetC().GetDList()
-    indexList := make([]int, 0, dList.Len())
-    dList.ForEach(func(index int, d *D) {
-        glog.Debugf("index: %d, item: %v", index, d.GetDUsername())
-        if d.GetDUsername() == "jimmy1" {
-            indexList = append(indexList, index)
-        }
-    })
-    for _, index := range indexList {
-        dList.Remove(index)
-    }
-
-    time.Sleep(time.Second)
 
     glog.Infof("Marshal %v", a.Marshal())
 }

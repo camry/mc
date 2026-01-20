@@ -4,7 +4,7 @@ import (
     "reflect"
     "strings"
 
-    "github.com/camry/g/glog"
+    "github.com/camry/g/gerrors/gerror"
     "github.com/spf13/cast"
 )
 
@@ -37,16 +37,26 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
         if builder.Len() > 0 {
             builder.WriteString(".")
         }
-        switch message.MessageType() {
-        case MessageTypeSub:
-            builder.WriteString(cast.ToString(message.Key()))
-        case MessageTypeListBase, MessageTypeListMessage:
-            builder.WriteString(cast.ToString(message.Key()))
-        case MessageTypeMapBase, MessageTypeMapMessage:
-            glog.Errorf("MessageTypeMapBase or MessageTypeMapMessage error: %v", message.MessageType())
-        default:
-            glog.Errorf("message type error: %v", message.MessageType())
-        }
+        builder.WriteString(cast.ToString(message.Key()))
     }
     return builder.String()
+}
+
+func toMapKey[T comparable](key string, kind reflect.Kind) (T, error) {
+    var t T
+    switch kind {
+    case reflect.Int32:
+        t = any(cast.ToInt32(key)).(T)
+    case reflect.Int64:
+        t = any(cast.ToInt64(key)).(T)
+    case reflect.Float32:
+        t = any(cast.ToFloat32(key)).(T)
+    case reflect.Float64:
+        t = any(cast.ToFloat64(key)).(T)
+    case reflect.String:
+        t = any(key).(T)
+    default:
+        return t, gerror.Newf("unsupported map key type: %s", kind)
+    }
+    return t, nil
 }

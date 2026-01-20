@@ -32,18 +32,12 @@ func (x *ListMessage[T]) Key() any {
 
 func (x *ListMessage[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
     nestedMessages = append(nestedMessages, x)
-    x.parent.Set(x.parent, key, val, nestedMessages...)
+    x.List.Set(x.parent, key, val, nestedMessages...)
 }
 
 func (x *ListMessage[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
     nestedMessages = append(nestedMessages, x)
-    x.parent.Unset(x.parent, key, nestedMessages...)
-}
-
-func (x *ListMessage[T]) AppendNewMessage() T {
-    item := x.creator(x, x.Len())
-    x.Append(item)
-    return item
+    x.List.Unset(x.parent, key, nestedMessages...)
 }
 
 func (x *ListMessage[T]) Decode(vr bsonrw.ValueReader, _ any) error {
@@ -76,4 +70,10 @@ func (x *ListMessage[T]) Decode(vr bsonrw.ValueReader, _ any) error {
         }
     }
     return nil
+}
+
+func (x *ListMessage[T]) AppendNewMessage() T {
+    item := x.creator(x, x.Len())
+    x.Append(item)
+    return item
 }

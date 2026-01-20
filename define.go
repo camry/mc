@@ -17,13 +17,12 @@ const (
     MessageTypeMapMessage
 )
 
-type ListBaseType interface {
+type BaseType interface {
     ~int32 | ~int64 | constraints.Float | ~string
 }
 
 type IMarshalBsonM interface {
     Marshal() bson.M
-    Unmarshal(bsonM bson.M) error
 }
 
 type IAdapter[T IMessageTop, K comparable] interface {
