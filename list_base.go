@@ -34,9 +34,13 @@ func (x *ListBase[T]) Key() any {
 }
 
 func (x *ListBase[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x)
+    x.parent.Set(x.parent, key, val, nestedMessages...)
 }
 
 func (x *ListBase[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x)
+    x.parent.Unset(x.parent, key, nestedMessages...)
 }
 
 func (x *ListBase[T]) Remove(item T) {

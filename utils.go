@@ -40,6 +40,8 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
         switch message.MessageType() {
         case MessageTypeSub:
             builder.WriteString(cast.ToString(message.Key()))
+        case MessageTypeListBase, MessageTypeListMessage:
+            builder.WriteString(cast.ToString(message.Key()))
         case MessageTypeMapBase, MessageTypeMapMessage:
             glog.Errorf("MessageTypeMapBase or MessageTypeMapMessage error: %v", message.MessageType())
         default:

@@ -281,11 +281,16 @@ func TestAdapter_Set(t *testing.T) {
     assert.Nil(t, err)
 
     dList := a.GetB().GetC().GetDList()
-    item := dList.NewMessage()
-    item.SetDUsername("jimmy1")
-    item.GetTags().Append("Jimmy1Tag1")
-    item.GetTags().Append("Jimmy1Tag2")
-    dList.Append(item)
+    indexList := make([]int, 0, dList.Len())
+    dList.ForEach(func(index int, d *D) {
+        glog.Debugf("index: %d, item: %v", index, d.GetDUsername())
+        if d.GetDUsername() == "jimmy1" {
+            indexList = append(indexList, index)
+        }
+    })
+    for _, index := range indexList {
+        dList.Remove(index)
+    }
 
     time.Sleep(time.Second)
 
