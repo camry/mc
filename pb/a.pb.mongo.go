@@ -10,12 +10,12 @@ import (
 type A struct {
 	mc.MessageTop[*A, int64]
 
-	_id            int64
-	aUsername      string
-	ids            *mc.ListBase[int32]
-	b              *B
-	aNicknameAlias string
-	aCount         int32
+	_id            int64               // Mongo 唯一ID
+	aUsername      string              // A用户名
+	ids            *mc.ListBase[int32] // ID列表
+	b              *B                  // B对象
+	aNicknameAlias string              // A昵称别名
+	aCount         int32               // A统计
 }
 
 var aDecode = mc.Register(&A{},
@@ -129,8 +129,8 @@ func (x *A) DecrACount(value int32) int32 {
 type B struct {
 	mc.MessageSub
 
-	bUsername string
-	c         *C
+	bUsername string // B用户名
+	c         *C     // C对象
 }
 
 var bDecode = mc.Register(&B{},
@@ -182,11 +182,11 @@ func (x *B) UnsetC() {
 type C struct {
 	mc.MessageSub
 
-	cUsername string
-	d         *D
-	dList     *mc.ListMessage[*D]
-	tagMap    *mc.MapBase[string, int32]
-	dMap      *mc.MapMessage[string, *D]
+	cUsername string                     // C用户名
+	d         *D                         // D对象
+	dList     *mc.ListMessage[*D]        // D列表
+	tagMap    *mc.MapBase[string, int32] // 标签字典
+	dMap      *mc.MapMessage[string, *D] // D字典
 }
 
 var cDecode = mc.Register(&C{},
@@ -277,13 +277,13 @@ func (x *C) GetDMap() *mc.MapMessage[string, *D] {
 type D struct {
 	mc.MessageSub
 
-	id        int32
-	uid       int64
-	dUsername string
-	isBool    bool
-	fltV32    float32
-	fltV64    float64
-	tags      *mc.ListBase[string]
+	id        int32                // ID
+	uid       int64                // UID
+	dUsername string               // D用户名
+	isBool    bool                 // 布尔
+	fltV32    float32              // 浮点数32
+	fltV64    float64              // 浮点数64
+	tags      *mc.ListBase[string] // 标签列表
 }
 
 var dDecode = mc.Register(&D{},
