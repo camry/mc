@@ -12,6 +12,7 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
 
     "github.com/camry/mc"
+    "github.com/camry/mc/pb"
 )
 
 func TestNewAdapter(t *testing.T) {
@@ -19,10 +20,10 @@ func TestNewAdapter(t *testing.T) {
     assert.Nil(t, err)
     assert.Equal(t, "treasure-user", db.Name())
 
-    adapter := mc.NewAdapter[*A, int64](db)
-    a := NewA(adapter, 2)
+    adapter := mc.NewAdapter[*pb.A, int64](db)
+    a := pb.NewA(adapter, 2)
 
-    decode, err := mc.GetDecode(&A{})
+    decode, err := mc.GetDecode(&pb.A{})
     assert.Nil(t, err)
     bsonRaw, err := db.Collection(a.Table()).FindOne(db.Context(), bson.M{"_id": a.Key()}).Raw()
     if errors.Is(err, mongo.ErrNoDocuments) {
@@ -34,18 +35,8 @@ func TestNewAdapter(t *testing.T) {
     err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
     assert.Nil(t, err)
 
-    d, ok := a.GetB().GetC().GetDMap().Get("jimmy1")
-    assert.True(t, ok)
-    // d.SetId(1)
-    // d.SetUid(1111)
-    // d.SetDUsername("jimmy1")
-    // d.SetIsBool(true)
-    // d.SetFltV32(1.12)
-    // d.SetFltV64(1.1234)
-    d.GetTags().Clear()
-    d.GetTags().Append("Jimmy1Tag0")
-    d.GetTags().Append("Jimmy1Tag1")
-    d.GetTags().Append("Jimmy1Tag2")
+    a.SetAUsername("camry")
+    a.SetANicknameAlias("Camry.Chen")
 
     time.Sleep(time.Second)
     glog.Infof("Marshal %v", a.Marshal())
