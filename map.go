@@ -65,14 +65,22 @@ func (x *Map[T, V]) GetAll() map[T]V {
     return result
 }
 
+// Clear 清空映射中的所有键值对
+func (x *Map[T, V]) Clear() {
+    x.v = make(map[T]V)                        // 创建一个新的空映射
+    x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
+}
+
 // Marshal 将映射转换为bson.M格式
 func (x *Map[T, V]) Marshal() bson.M {
     m := bson.M{}
-    for k, v := range x.v {
-        if vv, ok := any(v).(IMarshalBsonM); ok {
-            m[cast.ToString(k)] = vv.Marshal() // 如果值实现了 IMarshalBsonM 接口，则调用其 Marshal 方法
-        } else {
-            m[cast.ToString(k)] = v // 否则直接使用值
+    if x.Size() > 0 {
+        for k, v := range x.v {
+            if vv, ok := any(v).(IMarshalBsonM); ok {
+                m[cast.ToString(k)] = vv.Marshal() // 如果值实现了 IMarshalBsonM 接口，则调用其 Marshal 方法
+            } else {
+                m[cast.ToString(k)] = v // 否则直接使用值
+            }
         }
     }
     return m

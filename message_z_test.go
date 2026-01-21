@@ -80,6 +80,11 @@ func (a *A) GetB() *B {
     return a.b
 }
 
+func (a *A) UnsetB() {
+    a.b = nil
+    a.Unset(a, "b")
+}
+
 type B struct {
     mc.MessageSub
 
@@ -126,6 +131,11 @@ func (b *B) GetC() *C {
         b.c = newC(b, "c")
     }
     return b.c
+}
+
+func (b *B) UnsetC() {
+    b.c = nil
+    b.Unset(b, "c")
 }
 
 type C struct {
@@ -197,6 +207,11 @@ func (c *C) GetD() *D {
     return c.d
 }
 
+func (c *C) UnsetD() {
+    c.d = nil
+    c.Unset(c, "d")
+}
+
 func (c *C) GetDList() *mc.ListMessage[*D] {
     if c.dList == nil {
         c.dList = mc.NewListMessage[*D](c, "dList", newD)
@@ -221,13 +236,38 @@ func (c *C) GetDMap() *mc.MapMessage[string, *D] {
 type D struct {
     mc.MessageSub
 
+    id        int32
+    uid       int64
     dUsername string
+    isBool    bool
+    fltV32    float32
+    fltV64    float64
     tags      *mc.ListBase[string]
 }
 
 var dDecode = mc.Register(&D{},
+    mc.NewDecodePair("id", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.id, err = mc.Int32Decode(vr)
+        return
+    })),
+    mc.NewDecodePair("uid", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.uid, err = mc.Int64Decode(vr)
+        return
+    })),
     mc.NewDecodePair("dUsername", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
         v.dUsername, err = mc.StringDecode(vr)
+        return
+    })),
+    mc.NewDecodePair("isBool", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.isBool, err = mc.BoolDecode(vr)
+        return
+    })),
+    mc.NewDecodePair("fltV32", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.fltV32, err = mc.Float32Decode(vr)
+        return
+    })),
+    mc.NewDecodePair("fltV64", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+        v.fltV64, err = mc.Float64Decode(vr)
         return
     })),
     mc.NewDecodePair("tags", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
@@ -239,7 +279,12 @@ var dDecode = mc.Register(&D{},
 
 func (d *D) Marshal() bson.M {
     m := make(bson.M)
+    m["id"] = d.GetId()
+    m["uid"] = d.GetUid()
     m["dUsername"] = d.GetDUsername()
+    m["isBool"] = d.GetIsBool()
+    m["fltV32"] = d.GetFltV32()
+    m["fltV64"] = d.GetFltV64()
     m["tags"] = d.GetTags().Marshal()
     return m
 }
@@ -250,6 +295,24 @@ func newD(parent mc.IMessage, key any) *D {
     return x
 }
 
+func (d *D) GetId() int32 {
+    return d.id
+}
+
+func (d *D) SetId(id int32) {
+    d.id = id
+    d.Set(d, "id", id)
+}
+
+func (d *D) GetUid() int64 {
+    return d.uid
+}
+
+func (d *D) SetUid(uid int64) {
+    d.uid = uid
+    d.Set(d, "uid", uid)
+}
+
 func (d *D) GetDUsername() string {
     return d.dUsername
 }
@@ -257,6 +320,33 @@ func (d *D) GetDUsername() string {
 func (d *D) SetDUsername(username string) {
     d.dUsername = username
     d.Set(d, "dUsername", username)
+}
+
+func (d *D) GetIsBool() bool {
+    return d.isBool
+}
+
+func (d *D) SetIsBool(isBool bool) {
+    d.isBool = isBool
+    d.Set(d, "isBool", isBool)
+}
+
+func (d *D) GetFltV32() float32 {
+    return d.fltV32
+}
+
+func (d *D) SetFltV32(fltV32 float32) {
+    d.fltV32 = fltV32
+    d.Set(d, "fltV32", fltV32)
+}
+
+func (d *D) GetFltV64() float64 {
+    return d.fltV64
+}
+
+func (d *D) SetFltV64(fltV64 float64) {
+    d.fltV64 = fltV64
+    d.Set(d, "fltV64", fltV64)
 }
 
 func (d *D) GetTags() *mc.ListBase[string] {

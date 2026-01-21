@@ -99,14 +99,22 @@ func (x *List[T]) Remove(index int) {
     x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
 }
 
+// Clear 清空列表中的所有元素
+func (x *List[T]) Clear() {
+    x.v = x.v[:0]                              // 保留底层数组，只清除元素
+    x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
+}
+
 // Marshal 将列表转换为bson.A格式
 func (x *List[T]) Marshal() bson.A {
     a := bson.A{}
-    for _, v := range x.v {
-        if vv, ok := any(v).(IMarshalBsonM); ok {
-            a = append(a, vv.Marshal()) // 如果元素实现了 IMarshalBsonM 接口，则调用其 Marshal 方法
-        } else {
-            a = append(a, v) // 否则直接添加元素
+    if x.Len() > 0 {
+        for _, v := range x.v {
+            if vv, ok := any(v).(IMarshalBsonM); ok {
+                a = append(a, vv.Marshal()) // 如果元素实现了 IMarshalBsonM 接口，则调用其 Marshal 方法
+            } else {
+                a = append(a, v) // 否则直接添加元素
+            }
         }
     }
     return a

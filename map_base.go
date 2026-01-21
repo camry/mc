@@ -149,11 +149,3 @@ func (x *MapBase[T, V]) Delete(key T) {
     delete(x.v, key)       // 从映射中删除键值对
     x.Unset(x.parent, key) // 从父级中取消设置
 }
-
-// Clear 清空映射中的所有键值对
-func (x *MapBase[T, V]) Clear() {
-    for k := range x.v {
-        x.Unset(x.parent, k) // 取消设置每个键
-    }
-    x.v = make(map[T]V) // 创建新的空映射
-}
