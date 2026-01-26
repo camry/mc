@@ -2,7 +2,10 @@ package mc
 
 import (
     "context"
+    "errors"
 
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/bsonrw"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -26,4 +29,28 @@ func (x *MongoDatabase) Collection(name string, opts ...*options.CollectionOptio
         ctx:        x.ctx,                                // 使用相同的上下文
         Collection: x.Database.Collection(name, opts...), // 创建集合实例
     }
+}
+
+// Find 查找指定顶级消息对象
+func (x *MongoDatabase) Find(top IMessageTop) error {
+    decode, err := GetDecode(top)
+    if err != nil {
+        return err
+    }
+    bsonRaw, err := x.Collection(top.Table()).FindOne(x.Context(), bson.M{"_id": top.Key()}).Raw()
+    if err != nil {
+        if errors.Is(err, mongo.ErrNoDocuments) {
+            _, err = x.Collection(top.Table()).InsertOne(x.Context(), top.Marshal())
+            if err != nil {
+                return err
+            }
+            return nil
+        }
+        return err
+    }
+    err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), top)
+    if err != nil {
+        return err
+    }
+    return nil
 }

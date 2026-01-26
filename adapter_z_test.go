@@ -1,15 +1,11 @@
 package mc_test
 
 import (
-    "errors"
     "testing"
     "time"
 
     "github.com/camry/g/glog"
     "github.com/stretchr/testify/assert"
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
-    "go.mongodb.org/mongo-driver/mongo"
 
     "github.com/camry/mc"
     "github.com/camry/mc/pb"
@@ -23,16 +19,7 @@ func TestNewAdapter(t *testing.T) {
     adapter := mc.NewAdapter[*pb.A, int64](db)
     a := pb.NewA(adapter, 2)
 
-    decode, err := mc.GetDecode(&pb.A{})
-    assert.Nil(t, err)
-    bsonRaw, err := db.Collection(a.Table()).FindOne(db.Context(), bson.M{"_id": a.Key()}).Raw()
-    if errors.Is(err, mongo.ErrNoDocuments) {
-        _, err1 := db.Collection(a.Table()).InsertOne(db.Context(), a.Marshal())
-        assert.Nil(t, err1)
-    } else {
-        assert.Nil(t, err)
-    }
-    err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), a)
+    err = db.Find(a)
     assert.Nil(t, err)
 
     a.SetAUsername("camry")
