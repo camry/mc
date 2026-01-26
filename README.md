@@ -44,12 +44,12 @@ Mongo Collector
 
 ```go
 type A struct {
-mc.MessageTop[*A, int64]
+    mc.MessageTop[*A, int64]
 
-_id       int64
-aUsername string
-ids       *mc.ListBase[int32]
-b         *B
+    _id       int64
+    aUsername string
+    ids       *mc.ListBase[int32]
+    b         *B
 }
 ```
 
@@ -57,11 +57,11 @@ b         *B
 
 ```go
 var aDecode = mc.Register(&A{},
-mc.NewDecodePair("_id", mc.NewDecodeField(func (vr bsonrw.ValueReader, v *A) (err error) {
-v._id, err = mc.Int64Decode(vr)
-return
-})),
-// ... 其他字段解码
+    mc.NewDecodePair("_id", mc.NewDecodeField(func (vr bsonrw.ValueReader, v *A) (err error) {
+    v._id, err = mc.Int64Decode(vr)
+    return
+    })),
+    // ... 其他字段解码
 )
 ```
 
