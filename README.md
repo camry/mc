@@ -75,9 +75,9 @@ adapter := mc.NewAdapter[*A, int64](db)
 a := NewA(adapter, 2)
 
 // 操作数据
-a.SetAUsername("username") // 设置字符串值
-a.GetIds().Append(123)               // 添加到列表
-a.GetB().SetBUsername("subname") // 设置嵌套对象
+a.SetAUsername("username")
+a.GetIds().Append(123)
+a.GetB().SetBUsername("subname")
 ```
 
 ### 4. MongoDB 连接管理
