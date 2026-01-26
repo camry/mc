@@ -278,6 +278,7 @@ type D struct {
 	mc.MessageSub
 
 	id        int32                // ID
+	iid       uint32               // IID
 	uid       int64                // UID
 	dUsername string               // D用户名
 	isBool    bool                 // 布尔
@@ -289,6 +290,10 @@ type D struct {
 var dDecode = mc.Register(&D{},
 	mc.NewDecodePair("id", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
 		v.id, err = mc.Int32Decode(vr)
+		return
+	})),
+	mc.NewDecodePair("iid", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+		v.iid, err = mc.UInt32Decode(vr)
 		return
 	})),
 	mc.NewDecodePair("uid", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
@@ -327,6 +332,7 @@ func newD(parent mc.IMessage, key any) *D {
 func (x *D) Marshal() bson.M {
 	m := make(bson.M)
 	m["id"] = x.GetId()
+	m["iid"] = x.GetIid()
 	m["uid"] = x.GetUid()
 	m["dUsername"] = x.GetDUsername()
 	m["isBool"] = x.GetIsBool()
@@ -354,6 +360,26 @@ func (x *D) DecrId(value int32) int32 {
 	x.id -= value
 	x.Set(x, "id", x.id)
 	return x.id
+}
+
+func (x *D) GetIid() uint32 {
+	return x.iid
+}
+
+func (x *D) SetIid(value uint32) {
+	x.iid = value
+	x.Set(x, "iid", value)
+}
+
+func (x *D) IncrIid(value uint32) uint32 {
+	x.iid += value
+	x.Set(x, "iid", x.iid)
+	return x.iid
+}
+func (x *D) DecrIid(value uint32) uint32 {
+	x.iid -= value
+	x.Set(x, "iid", x.iid)
+	return x.iid
 }
 
 func (x *D) GetUid() int64 {

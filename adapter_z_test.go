@@ -1,6 +1,7 @@
 package mc_test
 
 import (
+    "math"
     "testing"
     "time"
 
@@ -24,6 +25,7 @@ func TestNewAdapter(t *testing.T) {
 
     a.SetAUsername("camry")
     a.SetANicknameAlias("Camry.Chen")
+    a.GetB().GetC().GetD().SetIid(math.MaxUint32)
 
     time.Sleep(time.Second)
     glog.Infof("Marshal %v", a.Marshal())
