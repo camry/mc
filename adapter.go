@@ -111,11 +111,11 @@ func (x *Adapter[T, K]) flushBatch(batchM []bson.M) {
     var writeModels []mongo.WriteModel
     for _, update := range batchM {
         writeModel := mongo.NewUpdateOneModel().
-            SetFilter(bson.M{"_id": x.GetKey()}). // 根据键值过滤
-            SetUpdate(update) // 设置更新内容
+            SetFilter(bson.M{"_id": x.GetKey()}).
+            SetUpdate(update)
         writeModels = append(writeModels, writeModel)
     }
-    _, err := x.db.Collection(x.t.Table()).BulkWrite(x.db.Context(), writeModels) // 批量写入
+    _, err := x.db.Collection(x.t.Table()).BulkWrite(x.db.Context(), writeModels)
     if err != nil {
         glog.Errorf("Adapter Consume BulkWrite Error: %v", err)
     }
