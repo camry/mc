@@ -20,12 +20,12 @@ const (
 
 // BaseType 定义基础类型约束，包括整型、浮点型和字符串
 type BaseType interface {
-    BaseTypeInteger | ~string
+    BaseTypeNumber | ~string
 }
 
-// BaseTypeInteger 定义基础类型整型约束，包括int32、int64和浮点型
-type BaseTypeInteger interface {
-    ~int32 | ~int64 | constraints.Float
+// BaseTypeNumber 定义基础类型整型约束，包括int32、int64和浮点型
+type BaseTypeNumber interface {
+    constraints.Integer | constraints.Float
 }
 
 // IMarshalBsonM 定义BSON映射接口，用于将对象转换为bson.M格式
