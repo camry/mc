@@ -23,7 +23,7 @@ type BaseType interface {
     BaseTypeNumber | ~string
 }
 
-// BaseTypeNumber 定义基础类型整型约束，包括int32、int64和浮点型
+// BaseTypeNumber 定义基础类型数字约束，包括整型和浮点型
 type BaseTypeNumber interface {
     constraints.Integer | constraints.Float
 }
