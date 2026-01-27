@@ -4,6 +4,7 @@ import (
     "time"
 
     "github.com/camry/g/glog"
+    "github.com/samber/lo"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/mongo"
 )
@@ -12,20 +13,27 @@ import (
 // T 代表实现了IMessageTop接口的消息类型
 // K 代表可比较的键类型
 type Adapter[T IMessageTop, K comparable] struct {
-    db      *MongoDatabase // db MongoDB数据库实例
-    t       T              // t 当前绑定的消息对象
-    k       K              // k 当前绑定的键值
-    setData chan bson.M    // setData 用于接收待设置数据的通道
+    t          T              // t 当前绑定的消息对象
+    k          K              // k 当前绑定的键值
+    db         *MongoDatabase // db MongoDB数据库实例
+    enableSave bool           // enableSave 保存数据
+    size       int            // size 缓冲容量
+    setData    chan bson.M    // setData 用于接收待设置数据的通道
 }
 
 // NewAdapter 创建新的适配器实例
 // db MongoDB数据库实例
-func NewAdapter[T IMessageTop, K comparable](db *MongoDatabase) *Adapter[T, K] {
+func NewAdapter[T IMessageTop, K comparable](db *MongoDatabase, opts ...AdapterOption[T, K]) *Adapter[T, K] {
     x := &Adapter[T, K]{
-        db:      db,
-        setData: make(chan bson.M, 1000), // 缓冲通道，容量为1000
+        db: db,
     }
-    go x.Consume() // 启动消费协程
+    for _, opt := range opts {
+        opt(x)
+    }
+    if x.enableSave {
+        x.setData = make(chan bson.M, lo.Max([]int{x.size, 100}))
+        go x.Consume()
+    }
     return x
 }
 
@@ -53,13 +61,15 @@ func (x *Adapter[T, K]) GetKey() K {
 // key 字段键
 // val 字段值
 func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, key, val any) {
-    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
-    x.setData <- bson.M{
-        "$set": bson.M{
-            mk: val, // 使用$set操作符设置字段值
-        },
+    if x.enableSave {
+        mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
+        x.setData <- bson.M{
+            "$set": bson.M{
+                mk: val, // 使用$set操作符设置字段值
+            },
+        }
+        glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
     }
-    glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
 }
 
 // Unset 取消设置字段值
@@ -67,17 +77,23 @@ func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, k
 // nestedMessages 嵌套消息列表
 // key 要取消设置的字段键
 func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage, key any) {
-    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
-    x.setData <- bson.M{
-        "$unset": bson.M{
-            mk: "", // 使用$unset操作符取消设置字段值
-        },
+    if x.enableSave {
+        mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
+        x.setData <- bson.M{
+            "$unset": bson.M{
+                mk: "", // 使用$unset操作符取消设置字段值
+            },
+        }
+        glog.Debugf("Adapter Unset Field Key:%s", mk)
     }
-    glog.Debugf("Adapter Unset Field Key:%s", mk)
 }
 
 // Consume 消费数据通道中的更新请求，批量执行数据库操作
 func (x *Adapter[T, K]) Consume() {
+    if !x.enableSave {
+        return
+    }
+
     const batchSize = 100                        // 批量处理大小
     const flushInterval = 100 * time.Millisecond // 刷新间隔
 

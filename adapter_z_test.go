@@ -17,7 +17,7 @@ func TestNewAdapter(t *testing.T) {
     assert.Nil(t, err)
     assert.Equal(t, "treasure-user", db.Name())
 
-    adapter := mc.NewAdapter[*pb.A, int64](db)
+    adapter := mc.NewAdapter[*pb.A, int64](db, mc.WithAdapterEnableSave[*pb.A, int64](true))
     a := pb.NewA(adapter, 2)
 
     err = db.Find(a)
