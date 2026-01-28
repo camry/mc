@@ -40,51 +40,9 @@ Mongo Collector
 
 ## 使用方式
 
-### 1. 定义数据模型
-
-```go
-type A struct {
-    mc.MessageTop[*A, int64]
-
-    _id       int64
-    aUsername string
-    ids       *mc.ListBase[int32]
-    b         *B
-}
+```bash
+protoc --mc_out=output_dir *.proto
 ```
-
-### 2. 注册解码器
-
-```go
-var aDecode = mc.Register(&A{},
-    mc.NewDecodePair("_id", mc.NewDecodeField(func (vr bsonrw.ValueReader, v *A) (err error) {
-    v._id, err = mc.Int64Decode(vr)
-    return
-    })),
-    // ... 其他字段解码
-)
-```
-
-### 3. 创建实例并使用
-
-```go
-// 创建适配器
-adapter := mc.NewAdapter[*A, int64](db)
-
-// 创建数据对象
-a := NewA(adapter, 2)
-
-// 操作数据
-a.SetAUsername("username")
-a.GetIds().Append(123)
-a.GetB().SetBUsername("subname")
-```
-
-### 4. MongoDB 连接管理
-
-- **MongoClient**: MongoDB 客户端封装
-- **MongoDatabase**: 数据库实例
-- **MongoCollection**: 集合操作
 
 ## 技术特点
 
