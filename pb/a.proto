@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "./;pb";
+
+message A {
+    int64 _id = 1; // Mongo 唯一ID
+    string aUsername = 2; // A用户名
+    repeated int32 ids = 3; // ID列表
+    B b = 4; // B对象
+    string a_nickname_alias = 5; // A昵称别名
+    int32 a_count = 6; // A统计
+}
+
+message B {
+    string bUsername = 1; // B用户名
+    C c = 2; // C对象
+}
+
+message C {
+    string cUsername = 1; // C用户名
+    D d = 2; // D对象
+    repeated D d_list = 3; // D列表
+    map<string, int32> tag_map = 4; // 标签字典
+    map<string, D> d_map = 5; // D字典
+}
+
+message D {
+    int32 id = 1; // ID
+    uint32 iid = 2; // IID
+    int64 uid = 3; // UID
+    string dUsername = 4; // D用户名
+    bool isBool = 5; // 布尔
+    float fltV32 = 6; // 浮点数32
+    double fltV64 = 7; // 浮点数64
+    bytes bytes = 8; // 字节
+    repeated string tags = 9; // 标签列表
+}
