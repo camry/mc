@@ -1,6 +1,8 @@
 package mc
 
 import (
+    "time"
+
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/bsonrw"
     "golang.org/x/exp/constraints"
@@ -16,6 +18,11 @@ const (
     MessageTypeListMessage                    // MessageTypeListMessage 消息类型列表消息类型
     MessageTypeMapBase                        // MessageTypeMapBase 基础类型映射消息类型
     MessageTypeMapMessage                     // MessageTypeMapMessage 消息类型映射消息类型
+)
+
+const (
+    ConsumeBatchSize     = 100                    // 消费批量处理大小
+    ConsumeFlushInterval = 100 * time.Millisecond // 消费刷新间隔
 )
 
 // BaseType 定义基础类型约束，包括整型、浮点型和字符串

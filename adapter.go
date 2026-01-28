@@ -94,18 +94,15 @@ func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage,
 
 // Consume 消费数据通道中的更新请求，批量执行数据库操作
 func (x *Adapter[T, K]) Consume() {
-    const batchSize = 100                        // 批量处理大小
-    const flushInterval = 100 * time.Millisecond // 刷新间隔
-
-    batchM := make([]bson.M, 0, batchSize)  // 批量数据切片
-    ticker := time.NewTicker(flushInterval) // 定时器
+    batchM := make([]bson.M, 0, ConsumeBatchSize)  // 批量数据切片
+    ticker := time.NewTicker(ConsumeFlushInterval) // 定时器
     defer ticker.Stop()
 
     for {
         select {
         case data := <-x.setData: // 接收数据设置请求
             batchM = append(batchM, data)
-            if len(batchM) >= batchSize { // 达到批量大小则执行批量操作
+            if len(batchM) >= ConsumeBatchSize { // 达到批量大小则执行批量操作
                 x.flushBatch(batchM)
                 batchM = batchM[:0] // 重置切片
             }
