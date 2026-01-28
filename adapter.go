@@ -94,10 +94,6 @@ func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage,
 
 // Consume 消费数据通道中的更新请求，批量执行数据库操作
 func (x *Adapter[T, K]) Consume() {
-    if !x.enableSave {
-        return
-    }
-
     const batchSize = 100                        // 批量处理大小
     const flushInterval = 100 * time.Millisecond // 刷新间隔
 
