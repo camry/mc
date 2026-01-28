@@ -61,14 +61,16 @@ func (x *Adapter[T, K]) GetKey() K {
 // key 字段键
 // val 字段值
 func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, key, val any) {
+    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     if x.enableSave {
-        mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
         x.setData <- bson.M{
             "$set": bson.M{
                 mk: val, // 使用$set操作符设置字段值
             },
         }
         glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
+    } else {
+        glog.Errorf("Adapter Set Key=%s Value=%v Error: %s", mk, val, "Adapter is not enabled for saving")
     }
 }
 
@@ -77,14 +79,16 @@ func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, k
 // nestedMessages 嵌套消息列表
 // key 要取消设置的字段键
 func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage, key any) {
+    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     if x.enableSave {
-        mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
         x.setData <- bson.M{
             "$unset": bson.M{
                 mk: "", // 使用$unset操作符取消设置字段值
             },
         }
         glog.Debugf("Adapter Unset Field Key:%s", mk)
+    } else {
+        glog.Errorf("Adapter Unset Key=%s Error: %s", mk, "Adapter is not enabled for saving")
     }
 }
 
