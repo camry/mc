@@ -284,6 +284,7 @@ type D struct {
 	isBool    bool                 // 布尔
 	fltV32    float32              // 浮点数32
 	fltV64    float64              // 浮点数64
+	bytes     []byte               // 字节
 	tags      *mc.ListBase[string] // 标签列表
 }
 
@@ -316,6 +317,10 @@ var dDecode = mc.Register(&D{},
 		v.fltV64, err = mc.Float64Decode(vr)
 		return
 	})),
+	mc.NewDecodePair("bytes", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
+		v.bytes, err = mc.BinaryDecode(vr)
+		return
+	})),
 	mc.NewDecodePair("tags", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *D) (err error) {
 		v.tags = mc.NewListBase[string](v, "tags")
 		err = v.tags.Decode(vr, v.tags)
@@ -338,6 +343,7 @@ func (x *D) Marshal() bson.M {
 	m["isBool"] = x.GetIsBool()
 	m["fltV32"] = x.GetFltV32()
 	m["fltV64"] = x.GetFltV64()
+	m["bytes"] = x.GetBytes()
 	m["tags"] = x.GetTags().Marshal()
 	return m
 }
@@ -458,6 +464,15 @@ func (x *D) DecrFltV64(value float64) float64 {
 	x.fltV64 -= value
 	x.Set(x, "fltV64", x.fltV64)
 	return x.fltV64
+}
+
+func (x *D) GetBytes() []byte {
+	return x.bytes
+}
+
+func (x *D) SetBytes(value []byte) {
+	x.bytes = value
+	x.Set(x, "bytes", value)
 }
 
 func (x *D) GetTags() *mc.ListBase[string] {

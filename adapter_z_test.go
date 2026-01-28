@@ -25,7 +25,16 @@ func TestNewAdapter(t *testing.T) {
 
     a.SetAUsername("camry")
     a.SetANicknameAlias("Camry.Chen")
+    a.GetB().GetC().GetD().SetId(math.MaxInt32)
     a.GetB().GetC().GetD().SetIid(math.MaxUint32)
+    a.GetB().GetC().GetD().SetUid(math.MaxInt64)
+    a.GetB().GetC().GetD().SetDUsername("camry")
+    a.GetB().GetC().GetD().SetIsBool(true)
+    a.GetB().GetC().GetD().SetFltV32(1234.1234)
+    a.GetB().GetC().GetD().SetFltV64(1234.123456789)
+    a.GetB().GetC().GetD().SetBytes([]byte("hello"))
+    a.GetB().GetC().GetD().GetTags().Append("tag3")
+    a.GetB().GetC().GetD().GetTags().Remove("tag3")
 
     time.Sleep(time.Second)
     glog.Infof("Marshal %v", a.Marshal())
