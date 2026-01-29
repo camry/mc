@@ -51,16 +51,16 @@ func (x *Adapter[T, K]) GetKey() K {
 // val 字段值
 func (x *Adapter[T, K]) Set(nestedMessages []IMessage, key, val any) {
     mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
-    if x.collector != nil {
-        x.collector.Write(x.t.Table(), mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(bson.M{
-            "$set": bson.M{
-                mk: val, // 使用$set操作符设置字段值
-            },
-        }), x.collectorWorkerOption...)
-        glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
-    } else {
-        glog.Errorf("Adapter Set Key=%s Value=%v Error: %s", mk, val, "Adapter is not enabled for saving")
+    if x.collector == nil {
+        glog.Errorf("Adapter Set Failed Collector Not Initialized For FieldKey:%s FieldValue:%v", mk, val)
+        return
     }
+    x.collector.Write(x.t.Table(), mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(bson.M{
+        "$set": bson.M{
+            mk: val, // 使用$set操作符设置字段值
+        },
+    }), x.collectorWorkerOption...)
+    glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
 }
 
 // Unset 取消设置字段值
@@ -68,14 +68,14 @@ func (x *Adapter[T, K]) Set(nestedMessages []IMessage, key, val any) {
 // key 要取消设置的字段键
 func (x *Adapter[T, K]) Unset(nestedMessages []IMessage, key any) {
     mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
-    if x.collector != nil {
-        x.collector.Write(x.t.Table(), mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(bson.M{
-            "$unset": bson.M{
-                mk: "", // 使用$unset操作符取消设置字段值
-            },
-        }), x.collectorWorkerOption...)
-        glog.Debugf("Adapter Unset Field Key:%s", mk)
-    } else {
-        glog.Errorf("Adapter Unset Key=%s Error: %s", mk, "Adapter is not enabled for saving")
+    if x.collector == nil {
+        glog.Errorf("Adapter Unset Failed Collector Not Initialized For FieldKey:%s", mk)
+        return
     }
+    x.collector.Write(x.t.Table(), mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(bson.M{
+        "$unset": bson.M{
+            mk: "", // 使用$unset操作符取消设置字段值
+        },
+    }), x.collectorWorkerOption...)
+    glog.Debugf("Adapter Unset Field Key:%s", mk)
 }

@@ -29,8 +29,8 @@ func TestNewAdapter(t *testing.T) {
     err = db.Find(a)
     assert.Nil(t, err)
 
-    a.SetAUsername("camry1")
-    a.SetANicknameAlias("Camry.Chen1")
+    a.SetAUsername("camry")
+    a.SetANicknameAlias("Camry.Chen")
     a.GetB().GetC().GetD().SetId(math.MaxInt32)
     a.GetB().GetC().GetD().SetIid(math.MaxUint32)
     a.GetB().GetC().GetD().SetUid(math.MaxInt64)
