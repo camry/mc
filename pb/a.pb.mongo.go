@@ -191,7 +191,7 @@ type C struct {
 	d         *D                         // D对象
 	dList     *mc.ListMessage[*D]        // D列表
 	tagMap    *mc.MapBase[string, int32] // 标签字典
-	dMap      *mc.MapMessage[string, *D] // D字典
+	dMap      *mc.MapMessage[int32, *D]  // D字典
 }
 
 var cDecode = mc.Register(&C{},
@@ -215,7 +215,7 @@ var cDecode = mc.Register(&C{},
 		return
 	})),
 	mc.NewDecodePair("dMap", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *C) (err error) {
-		v.dMap = mc.NewMapMessage[string, *D](v, "dMap", newD)
+		v.dMap = mc.NewMapMessage[int32, *D](v, "dMap", newD)
 		err = v.dMap.Decode(vr, v.dMap)
 		return
 	})),
@@ -272,9 +272,9 @@ func (x *C) GetTagMap() *mc.MapBase[string, int32] {
 	return x.tagMap
 }
 
-func (x *C) GetDMap() *mc.MapMessage[string, *D] {
+func (x *C) GetDMap() *mc.MapMessage[int32, *D] {
 	if x.dMap == nil {
-		x.dMap = mc.NewMapMessage[string, *D](x, "dMap", newD)
+		x.dMap = mc.NewMapMessage[int32, *D](x, "dMap", newD)
 	}
 	return x.dMap
 }

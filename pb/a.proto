@@ -23,7 +23,7 @@ message C {
     D d = 2; // D对象
     repeated D d_list = 3; // D列表
     map<string, int32> tag_map = 4; // 标签字典
-    map<string, D> d_map = 5; // D字典
+    map<int32, D> d_map = 5; // D字典
 }
 
 message D {

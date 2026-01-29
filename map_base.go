@@ -12,14 +12,14 @@ import (
 // MapBase 基础类型映射结构体，继承自 Map
 // T 键类型，必须是可比较的
 // V 值类型，必须是基础类型
-type MapBase[T comparable, V BaseType] struct {
+type MapBase[T BaseType, V BaseType] struct {
     Map[T, V] // 继承 Map 的所有方法
 }
 
 // NewMapBase 创建新的基础类型映射实例
 // parent 父级消息对象
 // key 当前映射在父级中的键
-func NewMapBase[T comparable, V BaseType](parent IMessage, key string) *MapBase[T, V] {
+func NewMapBase[T BaseType, V BaseType](parent IMessage, key string) *MapBase[T, V] {
     return &MapBase[T, V]{
         Map: Map[T, V]{
             parent: parent,
