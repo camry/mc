@@ -52,17 +52,17 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
 // toMapKey 将字符串键转换为指定类型的键
 // key 字符串形式的键
 // kind 目标类型种类
-func toMapKey[T BaseType](key string, kind reflect.Kind) (T, error) {
+func toMapKey[T MapKeyType](key string, kind reflect.Kind) (T, error) {
     var t T
     switch kind {
     case reflect.Int32:
         t = any(cast.ToInt32(key)).(T)
     case reflect.Int64:
         t = any(cast.ToInt64(key)).(T)
-    case reflect.Float32:
-        t = any(cast.ToFloat32(key)).(T)
-    case reflect.Float64:
-        t = any(cast.ToFloat64(key)).(T)
+    case reflect.Uint32:
+        t = any(cast.ToUint32(key)).(T)
+    case reflect.Uint64:
+        t = any(cast.ToUint64(key)).(T)
     case reflect.String:
         t = any(key).(T)
     default:

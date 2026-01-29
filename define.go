@@ -26,7 +26,17 @@ type BaseType interface {
 
 // BaseTypeNumber 定义基础类型数字约束，包括整型和浮点型
 type BaseTypeNumber interface {
-    constraints.Integer | constraints.Float
+    BaseTypeInteger | constraints.Float
+}
+
+// BaseTypeInteger 定义基础类型整数约束，包括int32、int64、uint32和uint64
+type BaseTypeInteger interface {
+    ~int32 | ~int64 | ~uint32 | ~uint64
+}
+
+// MapKeyType 映射键类型约束，包括整型和字符串
+type MapKeyType interface {
+    BaseTypeInteger | ~string
 }
 
 // IMarshalBsonM 定义BSON映射接口，用于将对象转换为bson.M格式

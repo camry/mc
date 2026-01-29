@@ -11,7 +11,7 @@ import (
 // MapMessage 消息类型映射结构体，用于管理消息对象的映射
 // T 键类型，必须是可比较的
 // V 值类型，必须实现IMessage接口
-type MapMessage[T BaseType, V IMessage] struct {
+type MapMessage[T MapKeyType, V IMessage] struct {
     Map[T, V]                                  // 继承 Map 的所有方法
     creator   func(parent IMessage, key any) V // 创建新消息对象的工厂函数
 }
@@ -20,7 +20,7 @@ type MapMessage[T BaseType, V IMessage] struct {
 // parent 父级消息对象
 // key 当前映射在父级中的键
 // creator 创建新消息对象的工厂函数
-func NewMapMessage[T BaseType, V IMessage](parent IMessage, key string, creator func(parent IMessage, key any) V) *MapMessage[T, V] {
+func NewMapMessage[T MapKeyType, V IMessage](parent IMessage, key string, creator func(parent IMessage, key any) V) *MapMessage[T, V] {
     return &MapMessage[T, V]{
         Map: Map[T, V]{
             parent: parent,
