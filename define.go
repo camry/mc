@@ -42,19 +42,19 @@ type IMarshalBsonM interface {
 
 // IAdapter 定义适配器接口，用于管理消息对象和键值对
 type IAdapter[T IMessageTop, K comparable] interface {
-    Bind(t T, k K)                                                       // Bind 绑定消息对象和键
-    GetMessageTop() T                                                    // GetMessageTop 获取顶级消息对象
-    GetKey() K                                                           // GetKey 获取键值
-    Set(topMessage IMessageTop, nestedMessages []IMessage, key, val any) // Set 设置指定字段的值
-    Unset(topMessage IMessageTop, nestedMessages []IMessage, key any)    // Unset 取消设置指定字段的值
+    Bind(t T, k K)                               // Bind 绑定消息对象和键
+    GetMessageTop() T                            // GetMessageTop 获取顶级消息对象
+    GetKey() K                                   // GetKey 获取键值
+    Set(nestedMessages []IMessage, key, val any) // Set 设置指定字段的值
+    Unset(nestedMessages []IMessage, key any)    // Unset 取消设置指定字段的值
 }
 
 // IMessage 定义消息接口，所有消息类型都应实现该接口
 type IMessage interface {
-    MessageType() MessageType                                    // MessageType 返回消息类型
-    Key() any                                                    // Key 返回消息的键
-    Set(self IMessage, key, val any, nestedMessages ...IMessage) // Set 设置字段值，支持嵌套消息
-    Unset(self IMessage, key any, nestedMessages ...IMessage)    // Unset 取消设置字段值，支持嵌套消息
+    MessageType() MessageType                     // MessageType 返回消息类型
+    Key() any                                     // Key 返回消息的键
+    Set(key, val any, nestedMessages ...IMessage) // Set 设置字段值，支持嵌套消息
+    Unset(key any, nestedMessages ...IMessage)    // Unset 取消设置字段值，支持嵌套消息
 }
 
 // IMessageTop 定义顶级消息接口，扩展自IMessage和IMarshalBsonM

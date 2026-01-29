@@ -40,22 +40,20 @@ func (x *MapBase[T, V]) Key() any {
 }
 
 // Set 设置字段值，添加当前映射到嵌套消息链
-// self 当前映射对象
 // key 要设置的字段键
 // val 要设置的值
 // nestedMessages 嵌套消息列表
-func (x *MapBase[T, V]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, x)          // 将当前映射添加到嵌套消息链
-    x.parent.Set(x.parent, key, val, nestedMessages...) // 委托给父级设置
+func (x *MapBase[T, V]) Set(key, val any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x) // 将当前映射添加到嵌套消息链
+    x.parent.Set(key, val, nestedMessages...)  // 委托给父级设置
 }
 
 // Unset 取消设置字段值，添加当前映射到嵌套消息链
-// self 当前映射对象
 // key 要取消设置的字段键
 // nestedMessages 嵌套消息列表
-func (x *MapBase[T, V]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, x)       // 将当前映射添加到嵌套消息链
-    x.parent.Unset(x.parent, key, nestedMessages...) // 委托给父级取消设置
+func (x *MapBase[T, V]) Unset(key any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x) // 将当前映射添加到嵌套消息链
+    x.parent.Unset(key, nestedMessages...)     // 委托给父级取消设置
 }
 
 // Decode 从bson读取器中解码数据到当前映射
@@ -139,13 +137,13 @@ func (x *MapBase[T, V]) Decode(vr bsonrw.ValueReader, _ any) error {
 // key 键
 // value 值
 func (x *MapBase[T, V]) Put(key T, value V) {
-    x.v[key] = value            // 更新映射中的值
-    x.Set(x.parent, key, value) // 更新父级中的值
+    x.v[key] = value  // 更新映射中的值
+    x.Set(key, value) // 更新父级中的值
 }
 
 // Delete 从映射中删除指定键的键值对
 // key 要删除的键
 func (x *MapBase[T, V]) Delete(key T) {
-    delete(x.v, key)       // 从映射中删除键值对
-    x.Unset(x.parent, key) // 从父级中取消设置
+    delete(x.v, key) // 从映射中删除键值对
+    x.Unset(key)     // 从父级中取消设置
 }

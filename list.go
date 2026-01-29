@@ -16,20 +16,18 @@ type List[T any] struct {
 }
 
 // Set 设置列表中某个元素的值
-// self 当前列表对象
 // key 要设置的字段键
 // val 要设置的值
 // nestedMessages 嵌套消息列表
-func (x *List[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
-    x.parent.Set(x.parent, key, val, nestedMessages...) // 委托给父级设置
+func (x *List[T]) Set(key, val any, nestedMessages ...IMessage) {
+    x.parent.Set(key, val, nestedMessages...) // 委托给父级设置
 }
 
 // Unset 取消设置列表中某个元素的值
-// self 当前列表对象
 // key 要取消设置的字段键
 // nestedMessages 嵌套消息列表
-func (x *List[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
-    x.parent.Unset(x.parent, key, nestedMessages...) // 委托给父级取消设置
+func (x *List[T]) Unset(key any, nestedMessages ...IMessage) {
+    x.parent.Unset(key, nestedMessages...) // 委托给父级取消设置
 }
 
 // Len 返回列表长度
@@ -88,21 +86,21 @@ func (x *List[T]) ForEach(fn func(index int, item T)) {
 // Append 向列表末尾添加元素
 // item 要添加的元素
 func (x *List[T]) Append(item T) {
-    x.v = append(x.v, item)                    // 添加元素到切片
-    x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
+    x.v = append(x.v, item)          // 添加元素到切片
+    x.parent.Set(x.key, x.Marshal()) // 更新父级中的值
 }
 
 // Remove 移除指定索引位置的元素
 // index 要移除元素的索引
 func (x *List[T]) Remove(index int) {
-    x.v = slices.Delete(x.v, index, index+1)   // 删除指定索引的元素
-    x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
+    x.v = slices.Delete(x.v, index, index+1) // 删除指定索引的元素
+    x.parent.Set(x.key, x.Marshal())         // 更新父级中的值
 }
 
 // Clear 清空列表中的所有元素
 func (x *List[T]) Clear() {
-    x.v = x.v[:0]                              // 保留底层数组，只清除元素
-    x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
+    x.v = x.v[:0]                    // 保留底层数组，只清除元素
+    x.parent.Set(x.key, x.Marshal()) // 更新父级中的值
 }
 
 // Marshal 将列表转换为bson.A格式

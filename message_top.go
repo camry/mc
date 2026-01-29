@@ -13,20 +13,18 @@ func (x *MessageTop[T, K]) MessageType() MessageType {
 }
 
 // Set 设置字段值
-// self 当前消息对象
 // key 要设置的字段键
 // val 要设置的值
 // nestedMessages 嵌套消息列表
-func (x *MessageTop[T, K]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
-    x.a.Set(x.a.GetMessageTop(), nestedMessages, key, val) // 通过适配器设置值
+func (x *MessageTop[T, K]) Set(key, val any, nestedMessages ...IMessage) {
+    x.a.Set(nestedMessages, key, val) // 通过适配器设置值
 }
 
 // Unset 取消设置字段值
-// self 当前消息对象
 // key 要取消设置的字段键
 // nestedMessages 嵌套消息列表
-func (x *MessageTop[T, K]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
-    x.a.Unset(x.a.GetMessageTop(), nestedMessages, key) // 通过适配器取消设置值
+func (x *MessageTop[T, K]) Unset(key any, nestedMessages ...IMessage) {
+    x.a.Unset(nestedMessages, key) // 通过适配器取消设置值
 }
 
 // Bind 绑定适配器、消息对象和键

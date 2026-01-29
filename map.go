@@ -67,8 +67,8 @@ func (x *Map[T, V]) GetAll() map[T]V {
 
 // Clear 清空映射中的所有键值对
 func (x *Map[T, V]) Clear() {
-    x.v = make(map[T]V)                        // 创建一个新的空映射
-    x.parent.Set(x.parent, x.key, x.Marshal()) // 更新父级中的值
+    x.v = make(map[T]V)              // 创建一个新的空映射
+    x.parent.Set(x.key, x.Marshal()) // 更新父级中的值
 }
 
 // Marshal 将映射转换为bson.M格式

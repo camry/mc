@@ -56,11 +56,10 @@ func (x *Adapter[T, K]) GetKey() K {
 }
 
 // Set 设置字段值
-// topMessage 顶级消息对象
 // nestedMessages 嵌套消息列表
 // key 字段键
 // val 字段值
-func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, key, val any) {
+func (x *Adapter[T, K]) Set(nestedMessages []IMessage, key, val any) {
     mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     if x.enableSave {
         x.setData <- bson.M{
@@ -75,10 +74,9 @@ func (x *Adapter[T, K]) Set(topMessage IMessageTop, nestedMessages []IMessage, k
 }
 
 // Unset 取消设置字段值
-// topMessage 顶级消息对象
 // nestedMessages 嵌套消息列表
 // key 要取消设置的字段键
-func (x *Adapter[T, K]) Unset(topMessage IMessageTop, nestedMessages []IMessage, key any) {
+func (x *Adapter[T, K]) Unset(nestedMessages []IMessage, key any) {
     mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     if x.enableSave {
         x.setData <- bson.M{
@@ -123,9 +121,7 @@ func (x *Adapter[T, K]) flushBatch(batchM []bson.M) {
     }
     var writeModels []mongo.WriteModel
     for _, update := range batchM {
-        writeModel := mongo.NewUpdateOneModel().
-            SetFilter(bson.M{"_id": x.GetKey()}).
-            SetUpdate(update)
+        writeModel := mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(update)
         writeModels = append(writeModels, writeModel)
     }
     _, err := x.db.Collection(x.t.Table()).BulkWrite(x.db.Context(), writeModels)

@@ -17,22 +17,20 @@ func (x *MessageSub) Key() any {
 }
 
 // Set 设置字段值，将当前消息添加到嵌套消息链
-// self 当前消息对象
 // key 要设置的字段键
 // val 要设置的值
 // nestedMessages 嵌套消息列表
-func (x *MessageSub) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, x)          // 将当前消息添加到嵌套消息链
-    x.parent.Set(x.parent, key, val, nestedMessages...) // 委托给父级设置
+func (x *MessageSub) Set(key, val any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x) // 将当前消息添加到嵌套消息链
+    x.parent.Set(key, val, nestedMessages...)  // 委托给父级设置
 }
 
 // Unset 取消设置字段值，将当前消息添加到嵌套消息链
-// self 当前消息对象
 // key 要取消设置的字段键
 // nestedMessages 嵌套消息列表
-func (x *MessageSub) Unset(self IMessage, key any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, x)       // 将当前消息添加到嵌套消息链
-    x.parent.Unset(x.parent, key, nestedMessages...) // 委托给父级取消设置
+func (x *MessageSub) Unset(key any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x) // 将当前消息添加到嵌套消息链
+    x.parent.Unset(key, nestedMessages...)     // 委托给父级取消设置
 }
 
 // Bind 绑定父级消息对象和键

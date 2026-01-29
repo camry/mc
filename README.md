@@ -41,7 +41,7 @@ Mongo Collector
 ## 使用方式
 
 ```bash
-protoc --mc_out=output_dir *.proto
+protoc --mc_out=./pb pb/*.proto
 ```
 
 ## 技术特点

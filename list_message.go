@@ -39,22 +39,20 @@ func (x *ListMessage[T]) Key() any {
 }
 
 // Set 设置字段值，添加当前列表到嵌套消息链
-// self 当前列表对象
 // key 要设置的字段键
 // val 要设置的值
 // nestedMessages 嵌套消息列表
-func (x *ListMessage[T]) Set(self IMessage, key, val any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, x)        // 将当前列表添加到嵌套消息链
-    x.List.Set(x.parent, key, val, nestedMessages...) // 委托给父类设置
+func (x *ListMessage[T]) Set(key, val any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x) // 将当前列表添加到嵌套消息链
+    x.List.Set(key, val, nestedMessages...)    // 委托给父类设置
 }
 
 // Unset 取消设置字段值，添加当前列表到嵌套消息链
-// self 当前列表对象
 // key 要取消设置的字段键
 // nestedMessages 嵌套消息列表
-func (x *ListMessage[T]) Unset(self IMessage, key any, nestedMessages ...IMessage) {
-    nestedMessages = append(nestedMessages, x)     // 将当前列表添加到嵌套消息链
-    x.List.Unset(x.parent, key, nestedMessages...) // 委托给父类取消设置
+func (x *ListMessage[T]) Unset(key any, nestedMessages ...IMessage) {
+    nestedMessages = append(nestedMessages, x) // 将当前列表添加到嵌套消息链
+    x.List.Unset(key, nestedMessages...)       // 委托给父类取消设置
 }
 
 // Decode 从bson读取器中解码数据到当前列表
