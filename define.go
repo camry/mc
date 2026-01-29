@@ -1,10 +1,9 @@
 package mc
 
 import (
-    "time"
-
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/bson/bsonrw"
+    "go.mongodb.org/mongo-driver/mongo"
     "golang.org/x/exp/constraints"
 )
 
@@ -20,11 +19,6 @@ const (
     MessageTypeMapMessage                     // MessageTypeMapMessage 消息类型映射消息类型
 )
 
-const (
-    ConsumeBatchSize     = 100                    // 消费批量处理大小
-    ConsumeFlushInterval = 100 * time.Millisecond // 消费刷新间隔
-)
-
 // BaseType 定义基础类型约束，包括整型、浮点型和字符串
 type BaseType interface {
     BaseTypeNumber | ~string
@@ -38,6 +32,17 @@ type BaseTypeNumber interface {
 // IMarshalBsonM 定义BSON映射接口，用于将对象转换为bson.M格式
 type IMarshalBsonM interface {
     Marshal() bson.M
+}
+
+type ICollector interface {
+    Write(table string, writeModel mongo.WriteModel, opts ...CollectorWorkerOption) // Write 写入数据
+    Close() error                                                                   // Close 关闭收集器
+}
+
+type ICollectorWorker interface {
+    Write(writeModel mongo.WriteModel) // Write 写入数据到缓冲区
+    Run()                              // Run 启动工作器
+    Close()                            // Close 关闭工作器
 }
 
 // IAdapter 定义适配器接口，用于管理消息对象和键值对

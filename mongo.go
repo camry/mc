@@ -8,20 +8,20 @@ import (
     "go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-// MongoClient MongoDB客户端结构体，封装了原生 *mongo.Client 客户端
+// MongoClient Mongo客户端结构体，封装了原生 *mongo.Client 客户端
 type MongoClient struct {
     *mongo.Client                 // 继承原生 *mongo.Client 客户端
     ctx           context.Context // 上下文
 }
 
-// NewMongoClient 创建新的MongoDB客户端
+// NewMongoClient 创建新的Mongo客户端
 // ctx 上下文
 // opts 客户端选项
 func NewMongoClient(ctx context.Context, opts ...*options.ClientOptions) (*MongoClient, error) {
     c := &MongoClient{
         ctx: ctx, // 设置上下文
     }
-    client, err := mongo.Connect(c.ctx, opts...) // 连接到 MongoDB
+    client, err := mongo.Connect(c.ctx, opts...) // 连接到 Mongo
     if err != nil {
         return nil, err
     }
@@ -48,7 +48,7 @@ func (x *MongoClient) Database(name string, opts ...*options.DatabaseOptions) *M
     }
 }
 
-// Close 关闭MongoDB连接
+// Close 关闭Mongo连接
 func (x *MongoClient) Close() error {
     return x.Disconnect(x.ctx) // 断开连接
 }

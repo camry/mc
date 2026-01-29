@@ -1,6 +1,7 @@
 package mc_test
 
 import (
+    "context"
     "math"
     "testing"
     "time"
@@ -17,14 +18,19 @@ func TestNewAdapter(t *testing.T) {
     assert.Nil(t, err)
     assert.Equal(t, "treasure-user", db.Name())
 
-    adapter := mc.NewAdapter[*pb.A, int64](db, mc.WithAdapterEnableSave[*pb.A, int64](true))
+    collector := mc.NewCollector(context.Background(), db)
+
+    adapter := mc.NewAdapter[*pb.A, int64](
+        mc.WithCollector[*pb.A, int64](collector),
+        mc.WithCollectorWorkerOption[*pb.A, int64](mc.WithCollectorWorkerFlushInterval(30*time.Second)),
+    )
     a := pb.NewA(adapter, 2)
 
     err = db.Find(a)
     assert.Nil(t, err)
 
-    a.SetAUsername("camry")
-    a.SetANicknameAlias("Camry.Chen")
+    a.SetAUsername("camry1")
+    a.SetANicknameAlias("Camry.Chen1")
     a.GetB().GetC().GetD().SetId(math.MaxInt32)
     a.GetB().GetC().GetD().SetIid(math.MaxUint32)
     a.GetB().GetC().GetD().SetUid(math.MaxInt64)
@@ -36,6 +42,8 @@ func TestNewAdapter(t *testing.T) {
     a.GetB().GetC().GetD().GetTags().Append("tag3")
     a.GetB().GetC().GetD().GetTags().Remove("tag3")
 
-    time.Sleep(time.Second)
+    time.Sleep(5 * time.Second)
+
+    _ = collector.Close()
     glog.Infof("Marshal %v", a.Marshal())
 }

@@ -6,7 +6,7 @@ import (
     "go.mongodb.org/mongo-driver/mongo"
 )
 
-// MongoCollection MongoDB集合结构体，封装了原生 *mongo.Collection 集合
+// MongoCollection Mongo集合结构体，封装了原生 *mongo.Collection 集合
 type MongoCollection struct {
     *mongo.Collection                 // 继承原生 *mongo.Collection 集合
     ctx               context.Context // 上下文

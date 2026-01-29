@@ -10,7 +10,7 @@ import (
     "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoDatabase MongoDB数据库结构体，封装了原生 *mongo.Database 数据库
+// MongoDatabase Mongo数据库结构体，封装了原生 *mongo.Database 数据库
 type MongoDatabase struct {
     *mongo.Database                 // 继承原生 *mongo.Database 数据库
     ctx             context.Context // 上下文
