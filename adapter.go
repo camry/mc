@@ -50,32 +50,32 @@ func (x *Adapter[T, K]) GetKey() K {
 // key 字段键
 // val 字段值
 func (x *Adapter[T, K]) Set(nestedMessages []IMessage, key, val any) {
-    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     if x.collector == nil {
-        glog.Errorf("Adapter Set Failed Collector Not Initialized For FieldKey:%s FieldValue:%v", mk, val)
+        glog.Errorf("Adapter Table %s Set Failed Collector Not Initialized", x.t.Table())
         return
     }
+    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     x.collector.Write(x.t.Table(), mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(bson.M{
         "$set": bson.M{
             mk: val, // 使用$set操作符设置字段值
         },
     }), x.collectorWorkerOption...)
-    glog.Debugf("Adapter Set Table=%s _id=%v FieldKey:%s FieldValue:%v", x.t.Table(), x.GetKey(), mk, val)
+    glog.Debugf("Adapter Table %s Set _id=%v FieldKey=%s FieldValue=%v", x.t.Table(), x.GetKey(), mk, val)
 }
 
 // Unset 取消设置字段值
 // nestedMessages 嵌套消息列表
 // key 要取消设置的字段键
 func (x *Adapter[T, K]) Unset(nestedMessages []IMessage, key any) {
-    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     if x.collector == nil {
-        glog.Errorf("Adapter Unset Failed Collector Not Initialized For FieldKey:%s", mk)
+        glog.Errorf("Adapter Table %s Unset Failed Collector Not Initialized", x.t.Table())
         return
     }
+    mk := toNestedMessageFieldKey(nestedMessages, key) // 构建嵌套消息字段键
     x.collector.Write(x.t.Table(), mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": x.GetKey()}).SetUpdate(bson.M{
         "$unset": bson.M{
             mk: "", // 使用$unset操作符取消设置字段值
         },
     }), x.collectorWorkerOption...)
-    glog.Debugf("Adapter Unset Field Key:%s", mk)
+    glog.Debugf("Adapter Table %s Unset FieldKey=%s", x.t.Table(), mk)
 }
