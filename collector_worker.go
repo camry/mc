@@ -77,6 +77,7 @@ func (x *CollectorWorker) Run() {
             if len(batchWriteModels) > 0 {
                 x.doBatchWriteModel(batchWriteModels)
                 batchWriteModels = batchWriteModels[:0]
+                glog.Debugf("CollectorWorker Table %s Run Flush Interval", x.table)
             }
         case <-x.ctx.Done():
             // 关闭缓冲区通道，让剩余数据被处理

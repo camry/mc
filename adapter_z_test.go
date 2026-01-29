@@ -22,7 +22,7 @@ func TestNewAdapter(t *testing.T) {
 
     adapter := mc.NewAdapter[*pb.A, int64](
         mc.WithCollector[*pb.A, int64](collector),
-        mc.WithCollectorWorkerOption[*pb.A, int64](mc.WithCollectorWorkerFlushInterval(30*time.Second)),
+        mc.WithCollectorWorkerOption[*pb.A, int64](mc.WithCollectorWorkerFlushInterval(100*time.Millisecond)),
     )
     a := pb.NewA(adapter, 2)
 
