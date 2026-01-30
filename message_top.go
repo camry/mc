@@ -3,7 +3,7 @@ package mc
 // MessageTop 顶级消息结构体，用于表示消息树的根节点
 // T 顶级消息类型，必须实现 IMessageTop 接口
 // K 键类型，必须是可比较的
-type MessageTop[T IMessageTop, K comparable] struct {
+type MessageTop[T IMessageTop, K BaseType] struct {
     a IAdapter[T, K] // a 适配器，用于管理消息对象和键值对
 }
 

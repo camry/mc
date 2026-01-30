@@ -8,7 +8,7 @@ import (
 // Map 映射结构体，用于管理键值对集合
 // T 键类型，必须是可比较的
 // V 值类型
-type Map[T comparable, V any] struct {
+type Map[T MapKeyType, V any] struct {
     parent IMessage // parent 父级消息对象
     key    string   // key 当前映射在父级中的键
     v      map[T]V  // v 存储键值对的实际映射

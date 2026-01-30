@@ -56,7 +56,7 @@ type ICollectorWorker interface {
 }
 
 // IAdapter 定义适配器接口，用于管理消息对象和键值对
-type IAdapter[T IMessageTop, K comparable] interface {
+type IAdapter[T IMessageTop, K BaseType] interface {
     Bind(t T, k K)                               // Bind 绑定消息对象和键
     GetMessageTop() T                            // GetMessageTop 获取顶级消息对象
     GetKey() K                                   // GetKey 获取键值

@@ -9,7 +9,7 @@ import (
 // Adapter 适配器结构体，用于处理Mongo数据操作
 // T 代表实现了IMessageTop接口的消息类型
 // K 代表可比较的键类型
-type Adapter[T IMessageTop, K comparable] struct {
+type Adapter[T IMessageTop, K BaseType] struct {
     t                     T                       // t 当前绑定的消息对象
     k                     K                       // k 当前绑定的键值
     collector             ICollector              // collector 收集器实例
@@ -19,7 +19,7 @@ type Adapter[T IMessageTop, K comparable] struct {
 // NewAdapter 创建新的适配器实例
 // db Mongo数据库实例
 // opts 适配器选项
-func NewAdapter[T IMessageTop, K comparable](opts ...AdapterOption[T, K]) *Adapter[T, K] {
+func NewAdapter[T IMessageTop, K BaseType](opts ...AdapterOption[T, K]) *Adapter[T, K] {
     x := &Adapter[T, K]{}
     for _, opt := range opts {
         opt(x)
