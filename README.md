@@ -58,7 +58,7 @@ Mongo Collector
 
 - 支持 Set 和 Unset 操作
 - 自动处理嵌套字段路径构建
-- 支持基础类型(int32/64, uint32/64, float32/64, string, bool, []byte)和复杂对象的混合操作
+- 支持基础类型(int32, int64, uint32, uint64, float32, float64, string, bool, []byte)和复杂对象的混合操作
 
 ### 4. 完整的 CRUD 操作
 
