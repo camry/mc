@@ -3,7 +3,7 @@ package mc
 import (
     "context"
 
-    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // MongoCollection Mongo集合结构体，封装了原生 *mongo.Collection 集合

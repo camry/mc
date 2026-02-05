@@ -1,9 +1,8 @@
 package mc
 
 import (
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
-    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/v2/bson"
+    "go.mongodb.org/mongo-driver/v2/mongo"
     "golang.org/x/exp/constraints"
 )
 
@@ -88,5 +87,5 @@ type IMessageSub interface {
 
 // IDecode 定义解码接口，用于从bson读取器中解析数据
 type IDecode interface {
-    Decode(vr bsonrw.ValueReader, v any) error // Decode 从bson读取器中解码数据到目标对象
+    Decode(vr bson.ValueReader, v any) error // Decode 从bson读取器中解码数据到目标对象
 }

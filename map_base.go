@@ -5,8 +5,7 @@ import (
     "reflect"
 
     "github.com/camry/g/gerrors/gerror"
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // MapBase 基础类型映射结构体，继承自 Map
@@ -59,15 +58,15 @@ func (x *MapBase[T, V]) Unset(key any, nestedMessages ...IMessage) {
 // Decode 从bson读取器中解码数据到当前映射
 // vr bson值读取器
 // _ 未使用的参数
-func (x *MapBase[T, V]) Decode(vr bsonrw.ValueReader, _ any) error {
+func (x *MapBase[T, V]) Decode(vr bson.ValueReader, _ any) error {
     if vr.Type() == bson.TypeEmbeddedDocument {
         doc, err := vr.ReadDocument() // 开始读取文档
         if err != nil {
             return err
         }
         for {
-            k, evr, err1 := doc.ReadElement()   // 读取文档中的每个元素
-            if errors.Is(err1, bsonrw.ErrEOD) { // 到达文档末尾
+            k, evr, err1 := doc.ReadElement() // 读取文档中的每个元素
+            if errors.Is(err1, bson.ErrEOD) { // 到达文档末尾
                 break
             }
             if err1 != nil {

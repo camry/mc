@@ -4,8 +4,7 @@ import (
     "errors"
     "reflect"
 
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // MapMessage 消息类型映射结构体，用于管理消息对象的映射
@@ -61,15 +60,15 @@ func (x *MapMessage[T, V]) Unset(key any, nestedMessages ...IMessage) {
 // Decode 从bson读取器中解码数据到当前映射
 // vr bson值读取器
 // _ 未使用的参数
-func (x *MapMessage[T, V]) Decode(vr bsonrw.ValueReader, _ any) error {
+func (x *MapMessage[T, V]) Decode(vr bson.ValueReader, _ any) error {
     if vr.Type() == bson.TypeEmbeddedDocument {
         doc, err := vr.ReadDocument() // 开始读取文档
         if err != nil {
             return err
         }
         for {
-            ek, evr, err1 := doc.ReadElement()  // 读取文档中的每个元素
-            if errors.Is(err1, bsonrw.ErrEOD) { // 到达文档末尾
+            ek, evr, err1 := doc.ReadElement() // 读取文档中的每个元素
+            if errors.Is(err1, bson.ErrEOD) {  // 到达文档末尾
                 break
             }
             if err1 != nil {

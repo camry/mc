@@ -6,7 +6,7 @@ import (
     "time"
 
     "github.com/camry/g/glog"
-    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type CollectorWorker struct {

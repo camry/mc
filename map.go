@@ -2,7 +2,7 @@ package mc
 
 import (
     "github.com/spf13/cast"
-    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // Map 映射结构体，用于管理键值对集合

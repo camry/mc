@@ -7,9 +7,7 @@ import (
 
     "github.com/camry/g/gerrors/gerror"
     "github.com/samber/lo"
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
-    "go.mongodb.org/mongo-driver/bson/bsontype"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // ListBase 基础类型列表结构体，继承自 List
@@ -60,22 +58,22 @@ func (x *ListBase[T]) Unset(key any, nestedMessages ...IMessage) {
 // Decode 从bson读取器中解码数据到当前列表
 // vr bson值读取器
 // _ 未使用的参数
-func (x *ListBase[T]) Decode(vr bsonrw.ValueReader, _ any) error {
+func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
     if vr.Type() == bson.TypeArray {
         arr, err := vr.ReadArray() // 开始读取数组
         if err != nil {
             return err
         }
         for {
-            avr, err1 := arr.ReadValue()        // 读取数组中的每个值
-            if errors.Is(err1, bsonrw.ErrEOA) { // 到达数组末尾
+            avr, err1 := arr.ReadValue()      // 读取数组中的每个值
+            if errors.Is(err1, bson.ErrEOA) { // 到达数组末尾
                 break
             }
             if err1 != nil {
                 return err1
             }
             // 检查值类型是否支持
-            if !lo.Contains([]bsontype.Type{
+            if !lo.Contains([]bson.Type{
                 bson.TypeInt32, bson.TypeInt64, bson.TypeDouble, bson.TypeString,
             }, avr.Type()) {
                 continue

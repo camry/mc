@@ -1,13 +1,13 @@
 package mc
 
 import (
+    "bytes"
     "context"
     "errors"
 
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
+    "go.mongodb.org/mongo-driver/v2/bson"
+    "go.mongodb.org/mongo-driver/v2/mongo"
+    "go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 // MongoDatabase Mongo数据库结构体，封装了原生 *mongo.Database 数据库
@@ -24,7 +24,7 @@ func (x *MongoDatabase) Context() context.Context {
 // Collection 获取指定名称的集合实例
 // name 集合名称
 // opts 集合选项
-func (x *MongoDatabase) Collection(name string, opts ...*options.CollectionOptions) *MongoCollection {
+func (x *MongoDatabase) Collection(name string, opts ...options.Lister[options.CollectionOptions]) *MongoCollection {
     return &MongoCollection{
         ctx:        x.ctx,                                // 使用相同的上下文
         Collection: x.Database.Collection(name, opts...), // 创建集合实例
@@ -48,7 +48,7 @@ func (x *MongoDatabase) Find(top IMessageTop) error {
         }
         return err
     }
-    err = decode.Decode(bsonrw.NewBSONDocumentReader(bsonRaw), top)
+    err = decode.Decode(bson.NewDocumentReader(bytes.NewReader(bsonRaw)), top)
     if err != nil {
         return err
     }

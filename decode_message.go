@@ -3,8 +3,7 @@ package mc
 import (
     "errors"
 
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/bson/bsonrw"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // DecodeMessage 消息解码器结构体
@@ -27,7 +26,7 @@ func NewDecodeMessage(decodePairs ...*DecodePair) *DecodeMessage {
 // Decode 执行消息解码操作
 // vr bson值读取器
 // v 解码目标对象
-func (x *DecodeMessage) Decode(vr bsonrw.ValueReader, v any) error {
+func (x *DecodeMessage) Decode(vr bson.ValueReader, v any) error {
     // 检查值类型是否为空或未定义
     if vr.Type() == bson.TypeNull {
         return vr.ReadNull()
@@ -45,7 +44,7 @@ func (x *DecodeMessage) Decode(vr bsonrw.ValueReader, v any) error {
     // 遍历文档中的每个元素
     for {
         key, evr, err1 := dr.ReadElement()
-        if errors.Is(err1, bsonrw.ErrEOD) { // 到达文档末尾
+        if errors.Is(err1, bson.ErrEOD) { // 到达文档末尾
             break
         }
         if err1 != nil {

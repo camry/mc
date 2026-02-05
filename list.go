@@ -4,7 +4,7 @@ import (
     "reflect"
     "slices"
 
-    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // List 列表结构体，用于管理同类型元素的有序集合

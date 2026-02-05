@@ -2,8 +2,8 @@ package mc
 
 import (
     "github.com/camry/g/glog"
-    "go.mongodb.org/mongo-driver/bson"
-    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/v2/bson"
+    "go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Adapter 适配器结构体，用于处理Mongo数据操作

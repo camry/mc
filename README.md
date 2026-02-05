@@ -4,9 +4,11 @@ Mongo Collector
 
 ## 项目概述
 
-**mc** 是一个名为 "Mongo Collector" 的 Go 语言库，专为简化 MongoDB 复杂文档操作而设计。该库采用面向对象的方式处理嵌套数据结构，通过泛型和接口设计实现类型安全的 MongoDB 文档操作，并能够自动处理复杂的嵌套结构。项目通过 Adapter 模式提供数据更新机制，结合 Collector 的批量异步处理能力，实现了高效的数据持久化方案，特别适合处理复杂的嵌套文档结构。
+**mc** 是一个名为 "Mongo Collector" 的 Go 语言库，专为简化 MongoDB 复杂文档操作而设计。该库采用面向对象的方式处理嵌套数据结构，通过泛型和接口设计实现类型安全的
+MongoDB 文档操作，并能够自动处理复杂的嵌套结构。项目通过 Adapter 模式提供数据更新机制，结合 Collector 的批量异步处理能力，实现了高效的数据持久化方案，特别适合处理复杂的嵌套文档结构。
 
-该项目的核心在于提供了一种优雅的方式来处理 MongoDB 中的嵌套文档，将复杂的 BSON 操作抽象为简单的对象操作。通过消息结构（MessageTop、MessageSub）和数据容器（ListBase、ListMessage、MapBase、MapMessage）的组合，开发者可以轻松地操作深层嵌套的文档结构，而无需手动构建复杂的字段路径。其独特的批量处理机制允许将多个更新操作合并为单个批量请求，显著提高了数据库写入性能。
+该项目的核心在于提供了一种优雅的方式来处理 MongoDB 中的嵌套文档，将复杂的 BSON
+操作抽象为简单的对象操作。通过消息结构（MessageTop、MessageSub）和数据容器（ListBase、ListMessage、MapBase、MapMessage）的组合，开发者可以轻松地操作深层嵌套的文档结构，而无需手动构建复杂的字段路径。其独特的批量处理机制允许将多个更新操作合并为单个批量请求，显著提高了数据库写入性能。
 
 ## 功能特性
 
@@ -74,7 +76,8 @@ Mongo Collector
 
 ## 应用场景
 
-这个库特别适用于需要频繁操作复杂嵌套 MongoDB 文档的应用场景，例如用户属性管理、配置存储、游戏数据存储等。通过面向对象的方式简化了复杂的嵌套文档操作，同时保持了高性能的数据访问能力。该库的设计使得开发者可以像操作普通对象一样操作 MongoDB 文档，而无需关心底层的 BSON 转换和查询构造。
+这个库特别适用于需要频繁操作复杂嵌套 MongoDB 文档的应用场景，例如用户属性管理、配置存储、游戏数据存储等。通过面向对象的方式简化了复杂的嵌套文档操作，同时保持了高性能的数据访问能力。该库的设计使得开发者可以像操作普通对象一样操作
+MongoDB 文档，而无需关心底层的 BSON 转换和查询构造。
 
 ## 使用方式
 
@@ -97,7 +100,7 @@ import (
     "github.com/camry/g/glog"
     "github.com/camry/mc"
     "github.com/camry/mc/pb"
-    "go.mongodb.org/mongo-driver/mongo/options"
+    "go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func main() {
