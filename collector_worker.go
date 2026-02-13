@@ -18,7 +18,6 @@ type CollectorWorker struct {
     bufferSize    int                   // 缓冲区大小
     batchSize     int                   // 批量大小
     flushInterval time.Duration         // 刷新间隔
-    done          chan struct{}         // 完成信号
     wg            sync.WaitGroup        // 等待组
 }
 
@@ -33,7 +32,6 @@ func NewCollectorWorker(ctx context.Context, db *MongoDatabase, table string, op
         bufferSize:    10000,
         batchSize:     100,
         flushInterval: 100 * time.Millisecond,
-        done:          make(chan struct{}),
     }
     for _, opt := range opts {
         opt(x)
@@ -54,7 +52,6 @@ func (x *CollectorWorker) Write(writeModel mongo.WriteModel) {
 
 // Run 启动工作器
 func (x *CollectorWorker) Run() {
-    defer close(x.done)
     ticker := time.NewTicker(x.flushInterval)
     defer ticker.Stop()
     batchWriteModels := make([]mongo.WriteModel, 0, x.batchSize)
@@ -103,7 +100,6 @@ func (x *CollectorWorker) Run() {
 // Close 关闭工作器
 func (x *CollectorWorker) Close() {
     x.cancel()
-    <-x.done
 }
 
 // doBatchWriteModel 执行批量写入
