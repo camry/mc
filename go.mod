@@ -1,4 +1,4 @@
-module github.com/camry/mc
+module gitea.meigushi.go/meigushi/mc
 
 go 1.25.4
 
