@@ -5,7 +5,7 @@ import (
     "reflect"
     "slices"
 
-    "github.com/camry/g/gerrors/gerror"
+    "github.com/camry/g/v2/gerrors/gerror"
     "github.com/samber/lo"
     "go.mongodb.org/mongo-driver/v2/bson"
 )

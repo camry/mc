@@ -4,7 +4,7 @@ import (
     "errors"
     "reflect"
 
-    "github.com/camry/g/gerrors/gerror"
+    "github.com/camry/g/v2/gerrors/gerror"
     "go.mongodb.org/mongo-driver/v2/bson"
 )
 

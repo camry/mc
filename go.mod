@@ -3,7 +3,7 @@ module gitea.meigushi.go/meigushi/mc
 go 1.25.4
 
 require (
-	github.com/camry/g v1.3.0
+	github.com/camry/g/v2 v2.0.2
 	github.com/samber/lo v1.52.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1

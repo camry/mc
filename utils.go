@@ -4,7 +4,7 @@ import (
     "reflect"
     "strings"
 
-    "github.com/camry/g/gerrors/gerror"
+    "github.com/camry/g/v2/gerrors/gerror"
     "github.com/spf13/cast"
 )
 

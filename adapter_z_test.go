@@ -6,7 +6,7 @@ import (
     "testing"
     "time"
 
-    "github.com/camry/g/glog"
+    "github.com/camry/g/v2/glog"
     "github.com/stretchr/testify/assert"
 
     "gitea.meigushi.go/meigushi/mc"

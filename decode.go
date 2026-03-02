@@ -1,7 +1,7 @@
 package mc
 
 import (
-    "github.com/camry/g/gerrors/gerror"
+    "github.com/camry/g/v2/gerrors/gerror"
 )
 
 // decodeMap 存储消息类型与解码器的映射关系

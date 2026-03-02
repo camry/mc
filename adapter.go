@@ -1,7 +1,7 @@
 package mc
 
 import (
-    "github.com/camry/g/glog"
+    "github.com/camry/g/v2/glog"
     "go.mongodb.org/mongo-driver/v2/bson"
     "go.mongodb.org/mongo-driver/v2/mongo"
 )
