@@ -1,4 +1,4 @@
-module gitea.meigushi.go/meigushi/mc
+module gitea.meigushi.go/meigushi/mc/v2
 
 go 1.25.4
 
