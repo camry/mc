@@ -9,8 +9,8 @@ import (
     "github.com/camry/g/glog"
     "github.com/stretchr/testify/assert"
 
-    "github.com/camry/mc"
-    "github.com/camry/mc/pb"
+    "gitea.meigushi.go/meigushi/mc"
+    "gitea.meigushi.go/meigushi/mc/pb"
 )
 
 func TestNewAdapter(t *testing.T) {

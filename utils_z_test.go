@@ -5,7 +5,7 @@ import (
 
     "github.com/stretchr/testify/assert"
 
-    "github.com/camry/mc"
+    "gitea.meigushi.go/meigushi/mc"
 )
 
 type UserProp struct {

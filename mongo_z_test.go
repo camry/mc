@@ -5,7 +5,7 @@ import (
 
     "go.mongodb.org/mongo-driver/v2/mongo/options"
 
-    "github.com/camry/mc"
+    "gitea.meigushi.go/meigushi/mc"
 )
 
 func defaultDB(names ...string) (*mc.MongoDatabase, error) {
