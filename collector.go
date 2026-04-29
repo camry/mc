@@ -30,6 +30,11 @@ func NewCollector(ctx context.Context, db *MongoDatabase, opts ...CollectorOptio
     return x
 }
 
+// Database 返回关联的Mongo数据库
+func (x *Collector) Database() *MongoDatabase {
+    return x.db
+}
+
 // Write 写入数据
 // table 表名
 // writeModel 写入模型

@@ -44,6 +44,7 @@ type IMarshalBsonM interface {
 }
 
 type ICollector interface {
+    Database() *MongoDatabase                                                       // Database 返回关联的Mongo数据库
     Write(table string, writeModel mongo.WriteModel, opts ...CollectorWorkerOption) // Write 写入数据
     Close() error                                                                   // Close 关闭收集器
 }

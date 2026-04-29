@@ -26,7 +26,7 @@ func TestNewAdapter(t *testing.T) {
     )
     a := pb.NewA(adapter, 2)
 
-    err = db.Find(a)
+    err = collector.Database().Find(a)
     assert.Nil(t, err)
 
     a.SetAUsername("camry")
