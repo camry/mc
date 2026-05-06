@@ -65,6 +65,15 @@ func (x *Map[T, V]) GetAll() map[T]V {
     return result
 }
 
+// Range 遍历映射中的每个键值对
+func (x *Map[T, V]) Range(fn func(key T, value V) bool) {
+    for k, v := range x.v {
+        if !fn(k, v) {
+            break
+        }
+    }
+}
+
 // Clear 清空映射中的所有键值对
 func (x *Map[T, V]) Clear() {
     x.v = make(map[T]V)              // 创建一个新的空映射
