@@ -2,7 +2,6 @@ package mc
 
 import (
     "context"
-    "sync"
     "time"
 
     "github.com/camry/g/v2/glog"
@@ -10,15 +9,14 @@ import (
 )
 
 type CollectorWorker struct {
-    ctx           context.Context       // 上下文
-    cancel        context.CancelFunc    // 上下文取消函数
-    db            *MongoDatabase        // Mongo 数据库实例
-    table         string                // 表名
-    buffer        chan mongo.WriteModel // 缓冲区通道
-    bufferSize    int                   // 缓冲区大小
-    batchSize     int                   // 批量大小
-    flushInterval time.Duration         // 刷新间隔
-    wg            sync.WaitGroup        // 等待组
+    ctx           context.Context       // ctx 上下文
+    cancel        context.CancelFunc    // cancel 上下文取消函数
+    db            *MongoDatabase        // db Mongo 数据库实例
+    table         string                // table 表名
+    buffer        chan mongo.WriteModel // buffer 缓冲区通道
+    bufferSize    int                   // bufferSize 缓冲区大小
+    batchSize     int                   // batchSize 批量大小
+    flushInterval time.Duration         // flushInterval 刷新间隔
 }
 
 // NewCollectorWorker 创建新的收集器工作实例

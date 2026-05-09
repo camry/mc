@@ -9,6 +9,9 @@ import (
 // MessageType 表示消息类型的枚举值
 type MessageType int8
 
+// AggregateStage 表示聚合阶段的枚举值
+type AggregateStage int8
+
 const (
     MessageTypeTop         MessageType = iota // MessageTypeTop 顶级消息类型
     MessageTypeSub                            // MessageTypeSub 子级消息类型
@@ -16,6 +19,11 @@ const (
     MessageTypeListMessage                    // MessageTypeListMessage 消息类型列表消息类型
     MessageTypeMapBase                        // MessageTypeMapBase 基础类型映射消息类型
     MessageTypeMapMessage                     // MessageTypeMapMessage 消息类型映射消息类型
+)
+
+const (
+    AggregateStageSet   AggregateStage = iota // AggregateStageSet 聚合阶段 $set
+    AggregateStageUnset                       // AggregateStageUnset 聚合阶段 $unset
 )
 
 // BaseType 定义基础类型约束，包括整型、浮点型和字符串
@@ -62,6 +70,13 @@ type IAdapter[T IMessageTop, K BaseType] interface {
     GetKey() K                                   // GetKey 获取键值
     Set(nestedMessages []IMessage, key, val any) // Set 设置指定字段的值
     Unset(nestedMessages []IMessage, key any)    // Unset 取消设置指定字段的值
+    Close() error                                // Close 关闭适配器
+}
+
+// IAdapterBsonM 定义适配器BSON接口，用于管理聚合阶段和BSON字段
+type IAdapterBsonM interface {
+    AggregateStage() AggregateStage
+    M() bson.M
 }
 
 // IMessage 定义消息接口，所有消息类型都应实现该接口

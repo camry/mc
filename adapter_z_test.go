@@ -44,6 +44,7 @@ func TestNewAdapter(t *testing.T) {
 
     time.Sleep(5 * time.Second)
 
+    _ = adapter.Close()
     _ = collector.Close()
     glog.Infof("Marshal %v", a.Marshal())
 }
