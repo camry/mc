@@ -1,6 +1,8 @@
 package mc
 
 import (
+    "encoding/base64"
+
     "github.com/camry/g/v2/gerrors/gerror"
     "github.com/spf13/cast"
     "go.mongodb.org/mongo-driver/v2/bson"
@@ -111,6 +113,12 @@ func BinaryDecode(vr bson.ValueReader) ([]byte, error) {
     case bson.TypeBinary:
         v, _, err := vr.ReadBinary()
         return v, err
+    case bson.TypeString:
+        s, err := vr.ReadString()
+        if err != nil {
+            return nil, err
+        }
+        return base64.StdEncoding.DecodeString(s)
     default:
         return nil, gerror.Newf("unexpected bson type %s for binary", vr.Type().String())
     }

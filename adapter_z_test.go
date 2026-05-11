@@ -8,6 +8,7 @@ import (
 
     "github.com/camry/g/v2/glog"
     "github.com/stretchr/testify/assert"
+    "go.mongodb.org/mongo-driver/v2/bson"
 
     "gitea.meigushi.go/meigushi/mc"
     "gitea.meigushi.go/meigushi/mc/pb"
@@ -42,15 +43,22 @@ func TestNewAdapter(t *testing.T) {
     a.GetB().GetC().GetD().GetTags().Append("tag3")
     a.GetB().GetC().GetD().GetTags().Remove("tag3")
 
+    v, err := bson.Marshal(a.Marshal())
+    assert.Nil(t, err)
+    var m bson.M
+    err = bson.Unmarshal(v, &m)
+    assert.Nil(t, err)
+
+    aa := pb.NewA(adapter, 2)
+    err = aa.Unmarshal(m)
+    assert.Nil(t, err)
+    aa.IncrACount(10)
+    assert.Equal(t, "camry", aa.GetAUsername())
+    assert.Equal(t, "Camry.Chen", aa.GetANicknameAlias())
+    glog.Infof("Marshal %v", aa.Marshal())
+
     time.Sleep(5 * time.Second)
 
     _ = adapter.Close()
     _ = collector.Close()
-
-    aa := pb.NewA(adapter, 2)
-    err = aa.Unmarshal(a.Marshal())
-    assert.Nil(t, err)
-    assert.Equal(t, "camry", aa.GetAUsername())
-    assert.Equal(t, "Camry.Chen", aa.GetANicknameAlias())
-    glog.Infof("Marshal %v", aa.Marshal())
 }
