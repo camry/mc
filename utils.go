@@ -1,11 +1,13 @@
 package mc
 
 import (
+    "bytes"
     "reflect"
     "strings"
 
     "github.com/camry/g/v2/gerrors/gerror"
     "github.com/spf13/cast"
+    "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // GetStructName 获取结构体的名称（不包括包名）
@@ -69,4 +71,16 @@ func toMapKey[T MapKeyType](key string, kind reflect.Kind) (T, error) {
         return t, gerror.Newf("unsupported map key type: %s", kind)
     }
     return t, nil
+}
+
+// MToValueReader 将 bson.M 对象转换为 bson.ValueReader 对象
+// m bson.M 对象
+// 返回 bson.ValueReader 对象
+func MToValueReader(m bson.M) (bson.ValueReader, error) {
+    raw, err := bson.Marshal(m)
+    if err != nil {
+        return nil, err
+    }
+    bsonRaw := bson.Raw(raw)
+    return bson.NewDocumentReader(bytes.NewReader(bsonRaw)), nil
 }

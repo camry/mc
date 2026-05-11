@@ -48,7 +48,8 @@ type MapKeyType interface {
 
 // IMarshalBsonM 定义BSON映射接口，用于将对象转换为bson.M格式
 type IMarshalBsonM interface {
-    Marshal() bson.M
+    Marshal() bson.M          // Marshal 将对象转换为bson.M格式
+    Unmarshal(m bson.M) error // Unmarshal 从bson.M格式反序列化对象
 }
 
 type ICollector interface {
@@ -75,8 +76,8 @@ type IAdapter[T IMessageTop, K BaseType] interface {
 
 // IAdapterBsonM 定义适配器BSON接口，用于管理聚合阶段和BSON字段
 type IAdapterBsonM interface {
-    AggregateStage() AggregateStage
-    M() bson.M
+    AggregateStage() AggregateStage // AggregateStage 聚合阶段
+    M() bson.M                      // M 聚合字段
 }
 
 // IMessage 定义消息接口，所有消息类型都应实现该接口

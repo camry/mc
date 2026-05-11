@@ -46,5 +46,11 @@ func TestNewAdapter(t *testing.T) {
 
     _ = adapter.Close()
     _ = collector.Close()
-    glog.Infof("Marshal %v", a.Marshal())
+
+    aa := pb.NewA(adapter, 2)
+    err = aa.Unmarshal(a.Marshal())
+    assert.Nil(t, err)
+    assert.Equal(t, "camry", aa.GetAUsername())
+    assert.Equal(t, "Camry.Chen", aa.GetANicknameAlias())
+    glog.Infof("Marshal %v", aa.Marshal())
 }
