@@ -2,6 +2,7 @@ package mc
 
 import (
     "context"
+    "strings"
     "time"
 
     "github.com/camry/g/v2/glog"
@@ -182,6 +183,21 @@ func (x *Adapter[T, K]) doBatchAdapterBsonM(batchAdapterBsonMList []IAdapterBson
         currentAggregateStage = abm.AggregateStage()
         // 合并 bson.M
         for k, v := range abm.M() {
+            hasConflict := false
+            for currentK := range currentM {
+                // 相同键直接覆盖，跳过检测
+                if k == currentK {
+                    break
+                }
+                // 检测父子键关系：currentK 是 k 的子路径 或 k 是 currentK 的子路径
+                if strings.HasPrefix(currentK, k+".") || strings.HasPrefix(k, currentK+".") {
+                    hasConflict = true
+                    break
+                }
+            }
+            if hasConflict {
+                flush()
+            }
             currentM[k] = v
         }
     }
