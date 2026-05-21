@@ -64,7 +64,7 @@ func (x *A) Table() string {
 
 func (x *A) Marshal() bson.M {
 	m := make(bson.M)
-	m["_id"] = x._id
+	m["_id"] = x.GetXId()
 	m["aUsername"] = x.GetAUsername()
 	m["ids"] = x.GetIds().Marshal()
 	m["b"] = x.GetB().Marshal()
@@ -83,6 +83,10 @@ func (x *A) Unmarshal(m bson.M) error {
 		return err
 	}
 	return decode.Decode(vr, x)
+}
+
+func (x *A) GetXId() int64 {
+	return x._id
 }
 
 func (x *A) GetAUsername() string {
