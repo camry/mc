@@ -64,7 +64,7 @@ func (x *A) Table() string {
 
 func (x *A) Marshal() bson.M {
 	m := make(bson.M)
-	m["_id"] = x.Key()
+	m["_id"] = x._id
 	m["aUsername"] = x.GetAUsername()
 	m["ids"] = x.GetIds().Marshal()
 	m["b"] = x.GetB().Marshal()

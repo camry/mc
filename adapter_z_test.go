@@ -25,7 +25,7 @@ func TestNewAdapter(t *testing.T) {
         mc.WithCollector[*pb.A, int64](collector),
         mc.WithCollectorWorkerOption[*pb.A, int64](mc.WithCollectorWorkerFlushInterval(100*time.Millisecond)),
     )
-    a := pb.NewA(adapter, 2)
+    a := pb.NewA(adapter, 1)
 
     err = collector.Database().Find(a)
     assert.Nil(t, err)
@@ -40,6 +40,8 @@ func TestNewAdapter(t *testing.T) {
     a.GetB().GetC().GetD().SetFltV32(1234.1234)
     a.GetB().GetC().GetD().SetFltV64(1234.123456789)
     a.GetB().GetC().GetD().SetBytes([]byte("hello"))
+    // a.GetB().GetC().GetD().GetTags().Append("tag1")
+    // a.GetB().GetC().GetD().GetTags().Append("tag2")
     a.GetB().GetC().GetD().GetTags().Append("tag3")
     a.GetB().GetC().GetD().GetTags().Remove("tag3")
 
@@ -49,7 +51,7 @@ func TestNewAdapter(t *testing.T) {
     err = bson.Unmarshal(v, &m)
     assert.Nil(t, err)
 
-    aa := pb.NewA(adapter, 2)
+    aa := pb.NewA(adapter, 1)
     err = aa.Unmarshal(m)
     assert.Nil(t, err)
     aa.IncrACount(10)

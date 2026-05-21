@@ -42,8 +42,10 @@ func NewAdapter[T IMessageTop, K BaseType](opts ...AdapterOption[T, K]) *Adapter
     ctxWithCancel, cancel := context.WithCancel(x.ctx)
     x.ctx = ctxWithCancel
     x.cancel = cancel
-    x.buffer = make(chan IAdapterBsonM, x.bufferSize)
-    go x.writeCollectorWorker()
+    if x.collector != nil {
+        x.buffer = make(chan IAdapterBsonM, x.bufferSize)
+        go x.writeCollectorWorker()
+    }
     return x
 }
 

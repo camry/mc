@@ -17,6 +17,9 @@ func (x *MessageTop[T, K]) MessageType() MessageType {
 // val 要设置的值
 // nestedMessages 嵌套消息列表
 func (x *MessageTop[T, K]) Set(key, val any, nestedMessages ...IMessage) {
+    if x.a == nil {
+        return
+    }
     x.a.Set(nestedMessages, key, val) // 通过适配器设置值
 }
 
@@ -24,6 +27,9 @@ func (x *MessageTop[T, K]) Set(key, val any, nestedMessages ...IMessage) {
 // key 要取消设置的字段键
 // nestedMessages 嵌套消息列表
 func (x *MessageTop[T, K]) Unset(key any, nestedMessages ...IMessage) {
+    if x.a == nil {
+        return
+    }
     x.a.Unset(nestedMessages, key) // 通过适配器取消设置值
 }
 
@@ -38,5 +44,8 @@ func (x *MessageTop[T, K]) Bind(adapter IAdapter[T, K], t T, k K) {
 
 // Key 返回当前消息的键
 func (x *MessageTop[T, K]) Key() any {
+    if x.a == nil {
+        return nil
+    }
     return x.a.GetKey() // 通过适配器获取键
 }
