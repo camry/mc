@@ -55,22 +55,25 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
 // key 字符串形式的键
 // kind 目标类型种类
 func toMapKey[T MapKeyType](key string, kind reflect.Kind) (T, error) {
-    var t T
+    var k any
+    // 获取目标类型
+    targetType := reflect.TypeOf((*T)(nil)).Elem()
     switch kind {
     case reflect.Int32:
-        t = any(cast.ToInt32(key)).(T)
+        k = cast.ToInt32(key)
     case reflect.Int64:
-        t = any(cast.ToInt64(key)).(T)
+        k = cast.ToInt64(key)
     case reflect.Uint32:
-        t = any(cast.ToUint32(key)).(T)
+        k = cast.ToUint32(key)
     case reflect.Uint64:
-        t = any(cast.ToUint64(key)).(T)
+        k = cast.ToUint64(key)
     case reflect.String:
-        t = any(key).(T)
+        k = key
     default:
+        var t T
         return t, gerror.Newf("unsupported map key type: %s", kind)
     }
-    return t, nil
+    return reflect.ValueOf(k).Convert(targetType).Interface().(T), nil
 }
 
 // MToValueReader 将 bson.M 对象转换为 bson.ValueReader 对象
