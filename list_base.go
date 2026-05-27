@@ -82,8 +82,10 @@ func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
                 val  any
                 err2 error
             )
+            // 获取目标类型
+            valueType := reflect.TypeOf(x.v).Elem()
             // 根据实际类型进行转换
-            kind := reflect.TypeOf(x.v).Elem().Kind()
+            kind := valueType.Kind()
             switch kind {
             case reflect.Int32:
                 val, err2 = avr.ReadInt32()
@@ -105,7 +107,7 @@ func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
             if err2 != nil {
                 return err2
             }
-            x.v = append(x.v, val.(T)) // 添加解码后的值到列表
+            x.v = append(x.v, reflect.ValueOf(val).Convert(valueType).Interface().(T)) // 添加解码后的值到列表
         }
     }
     return nil

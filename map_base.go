@@ -79,54 +79,41 @@ func (x *MapBase[T, V]) Decode(vr bson.ValueReader, _ any) error {
                 return evr.ReadUndefined()
             }
             var (
-                key T
-                val V
+                key  T
+                val  any
+                err2 error
             )
             // 转换键
             key, err1 = toMapKey[T](k, reflect.TypeOf(x.v).Key().Kind())
             if err1 != nil {
                 return err1
             }
+            // 获取值的目标类型
+            valueType := reflect.TypeOf(x.v).Elem()
             // 根据值类型进行转换
-            kind := reflect.TypeOf(x.v).Elem().Kind()
+            kind := valueType.Kind()
             switch kind {
             case reflect.Int32:
-                v, err2 := evr.ReadInt32()
-                if err2 != nil {
-                    return err2
-                }
-                val = any(v).(V)
+                val, err2 = evr.ReadInt32()
             case reflect.Int64:
-                v, err2 := evr.ReadInt64()
-                if err2 != nil {
-                    return err2
-                }
-                val = any(v).(V)
+                val, err2 = evr.ReadInt64()
             case reflect.Float32:
-                v, err2 := evr.ReadDouble()
-                if err2 != nil {
-                    return err2
+                vv, err3 := evr.ReadDouble()
+                if err3 != nil {
+                    return err3
                 }
-                val = any(float32(v)).(V)
+                val = float32(vv)
             case reflect.Float64:
-                v, err2 := evr.ReadDouble()
-                if err2 != nil {
-                    return err2
-                }
-                val = any(v).(V)
+                val, err2 = evr.ReadDouble()
             case reflect.String:
-                v, err2 := evr.ReadString()
-                if err2 != nil {
-                    return err2
-                }
-                val = any(v).(V)
+                val, err2 = evr.ReadString()
             default:
-                err2 := gerror.Newf("unknow BaseType %s", kind)
-                if err2 != nil {
-                    return err2
-                }
+                return gerror.Newf("unknow BaseType %s", kind)
             }
-            x.v[key] = val // 将键值对添加到映射
+            if err2 != nil {
+                return err2
+            }
+            x.v[key] = reflect.ValueOf(val).Convert(valueType).Interface().(V) // 将键值对添加到映射
         }
     }
     return nil

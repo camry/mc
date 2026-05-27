@@ -46,6 +46,14 @@ func Int32Decode(vr bson.ValueReader) (int32, error) {
     return cast.ToInt32(v), err
 }
 
+// EnumDecode 从bson值读取器中解码枚举值
+// vr bson值读取器
+// T 枚举类型
+func EnumDecode[T ~int32](vr bson.ValueReader) (T, error) {
+    v, err := Int64Decode(vr) // 先解码为int64再转换
+    return T(v), err
+}
+
 // Int64Decode 从bson值读取器中解码int64值
 // vr bson值读取器
 func Int64Decode(vr bson.ValueReader) (int64, error) {

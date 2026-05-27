@@ -32,6 +32,13 @@ func TestNewAdapter(t *testing.T) {
 
     a.SetAUsername("camry")
     a.SetANicknameAlias("Camry.Chen")
+    // a.GetIds().Append(pb.AEnum_A_ENUM_0)
+    // a.GetIds().Append(pb.AEnum_A_ENUM_1)
+    a.GetIds().Remove(pb.AEnum_A_ENUM_0)
+    a.SetAEnum(pb.AEnum_A_ENUM_1)
+    a.GetB().GetC().GetTagMap().Set("tag1", pb.AEnum_A_ENUM_0)
+    a.GetB().GetC().GetTagMap().Set("tag2", pb.AEnum_A_ENUM_1)
+    a.GetB().GetC().GetTagMap().Delete("tag1")
     a.GetB().GetC().GetD().SetId(math.MaxInt32)
     a.GetB().GetC().GetD().SetIid(math.MaxUint32)
     a.GetB().GetC().GetD().SetUid(math.MaxInt64)

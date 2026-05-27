@@ -4,13 +4,19 @@ package pb;
 
 option go_package = "./;pb";
 
+enum AEnum {
+    A_ENUM_0 = 0;
+    A_ENUM_1 = 1;
+}
+
 message A {
     int64 _id = 1; // Mongo 唯一ID
     string aUsername = 2; // A用户名
-    repeated int32 ids = 3; // ID列表
+    repeated AEnum ids = 3; // ID列表
     B b = 4; // B对象
     string a_nickname_alias = 5; // A昵称别名
     int32 a_count = 6; // A统计
+    AEnum a_enum = 7; // A枚举
 }
 
 message B {
@@ -22,7 +28,7 @@ message C {
     string cUsername = 1; // C用户名
     D d = 2; // D对象
     repeated D d_list = 3; // D列表
-    map<string, int32> tag_map = 4; // 标签字典
+    map<string, AEnum> tag_map = 4; // 标签字典
     map<uint64, D> d_map = 5; // D字典
 }
 
