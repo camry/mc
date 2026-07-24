@@ -40,6 +40,11 @@ func (x *List[T]) IsEmpty() bool {
     return len(x.v) == 0
 }
 
+// Values 返回列表元素的切片
+func (x *List[T]) Values() []T {
+    return x.v
+}
+
 // Contains 检查列表是否包含指定元素
 // item 要检查的元素
 func (x *List[T]) Contains(item T) bool {
