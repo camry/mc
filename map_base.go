@@ -84,12 +84,12 @@ func (x *MapBase[T, V]) Decode(vr bson.ValueReader, _ any) error {
                 err2 error
             )
             // 转换键
-            key, err1 = toMapKey[T](k, reflect.TypeOf(x.v).Key().Kind())
+            key, err1 = toMapKey[T](k, reflect.TypeFor[map[T]V]().Key().Kind())
             if err1 != nil {
                 return err1
             }
             // 获取值的目标类型
-            valueType := reflect.TypeOf(x.v).Elem()
+            valueType := reflect.TypeFor[map[T]V]().Elem()
             // 根据值类型进行转换
             kind := valueType.Kind()
             switch kind {

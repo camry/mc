@@ -32,8 +32,8 @@ func TestNewAdapter(t *testing.T) {
 
     a.SetAUsername("camry")
     a.SetANicknameAlias("Camry.Chen")
-    // a.GetIds().Append(pb.AEnum_A_ENUM_0)
-    // a.GetIds().Append(pb.AEnum_A_ENUM_1)
+    a.GetIds().Append(pb.AEnum_A_ENUM_0)
+    a.GetIds().Append(pb.AEnum_A_ENUM_1)
     a.GetIds().Remove(pb.AEnum_A_ENUM_0)
     a.SetAEnum(pb.AEnum_A_ENUM_1)
     a.GetB().GetC().GetTagMap().Set("tag1", pb.AEnum_A_ENUM_0)
@@ -47,8 +47,8 @@ func TestNewAdapter(t *testing.T) {
     a.GetB().GetC().GetD().SetFltV32(1234.1234)
     a.GetB().GetC().GetD().SetFltV64(1234.123456789)
     a.GetB().GetC().GetD().SetBytes([]byte("hello"))
-    // a.GetB().GetC().GetD().GetTags().Append("tag1")
-    // a.GetB().GetC().GetD().GetTags().Append("tag2")
+    a.GetB().GetC().GetD().GetTags().Append("tag1")
+    a.GetB().GetC().GetD().GetTags().Append("tag2")
     a.GetB().GetC().GetD().GetTags().Append("tag3")
     a.GetB().GetC().GetD().GetTags().Remove("tag3")
 

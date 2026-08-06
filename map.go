@@ -1,6 +1,8 @@
 package mc
 
 import (
+    "maps"
+
     "github.com/spf13/cast"
     "go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -59,9 +61,7 @@ func (x *Map[T, V]) Values() []V {
 // GetAll 返回映射的完整副本
 func (x *Map[T, V]) GetAll() map[T]V {
     result := make(map[T]V, len(x.v)) // 预分配容量
-    for k, v := range x.v {
-        result[k] = v
-    }
+    maps.Copy(result, x.v)
     return result
 }
 

@@ -81,7 +81,7 @@ func (x *MapMessage[T, V]) Decode(vr bson.ValueReader, _ any) error {
                 return evr.ReadUndefined()
             }
             // 转换键
-            key, err1 := toMapKey[T](ek, reflect.TypeOf(x.v).Key().Kind())
+            key, err1 := toMapKey[T](ek, reflect.TypeFor[map[T]V]().Key().Kind())
             if err1 != nil {
                 return err1
             }

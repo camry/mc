@@ -83,7 +83,7 @@ func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
                 err2 error
             )
             // 获取目标类型
-            valueType := reflect.TypeOf(x.v).Elem()
+            valueType := reflect.TypeFor[[]T]().Elem()
             // 根据实际类型进行转换
             kind := valueType.Kind()
             switch kind {

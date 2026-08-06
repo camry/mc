@@ -13,8 +13,8 @@ import (
 // GetStructName 获取结构体的名称（不包括包名）
 // i 任意对象
 func GetStructName(i any) string {
-    t := reflect.TypeOf(i)        // 获取类型信息
-    for t.Kind() == reflect.Ptr { // 如果是指针类型，获取指向的类型
+    t := reflect.TypeOf(i)            // 获取类型信息
+    for t.Kind() == reflect.Pointer { // 如果是指针类型，获取指向的类型
         t = t.Elem()
     }
     return t.Name() // 返回类型名称
@@ -57,7 +57,7 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
 func toMapKey[T MapKeyType](key string, kind reflect.Kind) (T, error) {
     var k any
     // 获取目标类型
-    targetType := reflect.TypeOf((*T)(nil)).Elem()
+    targetType := reflect.TypeFor[T]()
     switch kind {
     case reflect.Int32:
         k = cast.ToInt32(key)

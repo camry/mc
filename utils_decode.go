@@ -127,6 +127,10 @@ func BinaryDecode(vr bson.ValueReader) ([]byte, error) {
             return nil, err
         }
         return base64.StdEncoding.DecodeString(s)
+    case bson.TypeNull:
+        return nil, vr.ReadNull()
+    case bson.TypeUndefined:
+        return nil, vr.ReadUndefined()
     default:
         return nil, gerror.Newf("unexpected bson type %s for binary", vr.Type().String())
     }
