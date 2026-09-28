@@ -4,7 +4,6 @@ go 1.26.0
 
 require (
 	github.com/camry/g/v2 v2.0.4
-	github.com/samber/lo v1.53.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.12.1
 	go.mongodb.org/mongo-driver/v2 v2.9.1
