@@ -61,44 +61,45 @@ func (x *MapMessage[T, V]) Unset(key any, nestedMessages ...IMessage) {
 // vr bson值读取器
 // _ 未使用的参数
 func (x *MapMessage[T, V]) Decode(vr bson.ValueReader, _ any) error {
-    if vr.Type() == bson.TypeEmbeddedDocument {
-        doc, err := vr.ReadDocument() // 开始读取文档
-        if err != nil {
-            return err
+    if vr.Type() != bson.TypeEmbeddedDocument {
+        return vr.Skip() // 非文档类型（含 null）直接跳过
+    }
+    doc, err := vr.ReadDocument() // 开始读取文档
+    if err != nil {
+        return err
+    }
+    for {
+        ek, evr, err1 := doc.ReadElement() // 读取文档中的每个元素
+        if errors.Is(err1, bson.ErrEOD) {  // 到达文档末尾
+            break
         }
-        for {
-            ek, evr, err1 := doc.ReadElement() // 读取文档中的每个元素
-            if errors.Is(err1, bson.ErrEOD) {  // 到达文档末尾
-                break
-            }
-            if err1 != nil {
-                return err1
-            }
-            if evr.Type() == bson.TypeNull {
-                return evr.ReadNull()
-            }
-            if evr.Type() == bson.TypeUndefined {
-                return evr.ReadUndefined()
-            }
-            // 转换键
-            key, err1 := toMapKey[T](ek, reflect.TypeFor[map[T]V]().Key().Kind())
-            if err1 != nil {
-                return err1
-            }
-            // 创建新消息对象
-            val := x.creator(x, key)
-            // 获取解码器
-            decodeMessage, err1 := GetDecode(val)
-            if err1 != nil {
-                return err1
-            }
-            // 解码消息对象
-            err1 = decodeMessage.Decode(evr, val)
-            if err1 != nil {
-                return err1
-            }
-            x.v[key] = val // 将键值对添加到映射
+        if err1 != nil {
+            return err1
         }
+        if evr.Type() != bson.TypeEmbeddedDocument { // 跳过非嵌入文档类型的值（含 null/undefined）
+            if err1 = evr.Skip(); err1 != nil {
+                return err1
+            }
+            continue
+        }
+        // 转换键
+        key, err1 := toMapKey[T](ek, reflect.TypeFor[T]().Kind())
+        if err1 != nil {
+            return err1
+        }
+        // 创建新消息对象
+        val := x.creator(x, key)
+        // 获取解码器
+        decodeMessage, err1 := GetDecode(val)
+        if err1 != nil {
+            return err1
+        }
+        // 解码消息对象
+        err1 = decodeMessage.Decode(evr, val)
+        if err1 != nil {
+            return err1
+        }
+        x.v[key] = val // 将键值对添加到映射
     }
     return nil
 }

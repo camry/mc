@@ -4,7 +4,6 @@ import (
     "errors"
     "reflect"
 
-    "github.com/camry/g/v2/gerrors/gerror"
     "go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -59,62 +58,38 @@ func (x *MapBase[T, V]) Unset(key any, nestedMessages ...IMessage) {
 // vr bson值读取器
 // _ 未使用的参数
 func (x *MapBase[T, V]) Decode(vr bson.ValueReader, _ any) error {
-    if vr.Type() == bson.TypeEmbeddedDocument {
-        doc, err := vr.ReadDocument() // 开始读取文档
-        if err != nil {
-            return err
+    if vr.Type() != bson.TypeEmbeddedDocument {
+        return vr.Skip() // 非文档类型（含 null）直接跳过
+    }
+    doc, err := vr.ReadDocument() // 开始读取文档
+    if err != nil {
+        return err
+    }
+    for {
+        k, evr, err1 := doc.ReadElement() // 读取文档中的每个元素
+        if errors.Is(err1, bson.ErrEOD) { // 到达文档末尾
+            break
         }
-        for {
-            k, evr, err1 := doc.ReadElement() // 读取文档中的每个元素
-            if errors.Is(err1, bson.ErrEOD) { // 到达文档末尾
-                break
-            }
-            if err1 != nil {
+        if err1 != nil {
+            return err1
+        }
+        // 跳过无法解码为目标类型的值（含 null/undefined）
+        if !canBaseDecode[V](evr.Type()) {
+            if err1 = evr.Skip(); err1 != nil {
                 return err1
             }
-            if evr.Type() == bson.TypeNull {
-                return evr.ReadNull()
-            }
-            if evr.Type() == bson.TypeUndefined {
-                return evr.ReadUndefined()
-            }
-            var (
-                key  T
-                val  any
-                err2 error
-            )
-            // 转换键
-            key, err1 = toMapKey[T](k, reflect.TypeFor[map[T]V]().Key().Kind())
-            if err1 != nil {
-                return err1
-            }
-            // 获取值的目标类型
-            valueType := reflect.TypeFor[map[T]V]().Elem()
-            // 根据值类型进行转换
-            kind := valueType.Kind()
-            switch kind {
-            case reflect.Int32:
-                val, err2 = evr.ReadInt32()
-            case reflect.Int64:
-                val, err2 = evr.ReadInt64()
-            case reflect.Float32:
-                vv, err3 := evr.ReadDouble()
-                if err3 != nil {
-                    return err3
-                }
-                val = float32(vv)
-            case reflect.Float64:
-                val, err2 = evr.ReadDouble()
-            case reflect.String:
-                val, err2 = evr.ReadString()
-            default:
-                return gerror.Newf("unknow BaseType %s", kind)
-            }
-            if err2 != nil {
-                return err2
-            }
-            x.v[key] = reflect.ValueOf(val).Convert(valueType).Interface().(V) // 将键值对添加到映射
+            continue
         }
+        // 转换键
+        key, err1 := toMapKey[T](k, reflect.TypeFor[T]().Kind())
+        if err1 != nil {
+            return err1
+        }
+        val, err1 := BaseDecode[V](evr)
+        if err1 != nil {
+            return err1
+        }
+        x.v[key] = val // 将键值对添加到映射
     }
     return nil
 }

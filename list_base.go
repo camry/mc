@@ -2,11 +2,8 @@ package mc
 
 import (
     "errors"
-    "reflect"
     "slices"
 
-    "github.com/camry/g/v2/gerrors/gerror"
-    "github.com/samber/lo"
     "go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -59,56 +56,33 @@ func (x *ListBase[T]) Unset(key any, nestedMessages ...IMessage) {
 // vr bson值读取器
 // _ 未使用的参数
 func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
-    if vr.Type() == bson.TypeArray {
-        arr, err := vr.ReadArray() // 开始读取数组
-        if err != nil {
-            return err
+    if vr.Type() != bson.TypeArray {
+        return vr.Skip() // 非数组类型（含 null）直接跳过
+    }
+    arr, err := vr.ReadArray() // 开始读取数组
+    if err != nil {
+        return err
+    }
+    for {
+        avr, err1 := arr.ReadValue()      // 读取数组中的每个值
+        if errors.Is(err1, bson.ErrEOA) { // 到达数组末尾
+            break
         }
-        for {
-            avr, err1 := arr.ReadValue()      // 读取数组中的每个值
-            if errors.Is(err1, bson.ErrEOA) { // 到达数组末尾
-                break
-            }
-            if err1 != nil {
+        if err1 != nil {
+            return err1
+        }
+        // 跳过无法解码为目标类型的值
+        if !canBaseDecode[T](avr.Type()) {
+            if err1 = avr.Skip(); err1 != nil {
                 return err1
             }
-            // 检查值类型是否支持
-            if !lo.Contains([]bson.Type{
-                bson.TypeInt32, bson.TypeInt64, bson.TypeDouble, bson.TypeString,
-            }, avr.Type()) {
-                continue
-            }
-            var (
-                val  any
-                err2 error
-            )
-            // 获取目标类型
-            valueType := reflect.TypeFor[[]T]().Elem()
-            // 根据实际类型进行转换
-            kind := valueType.Kind()
-            switch kind {
-            case reflect.Int32:
-                val, err2 = avr.ReadInt32()
-            case reflect.Int64:
-                val, err2 = avr.ReadInt64()
-            case reflect.Float32:
-                vv, err3 := avr.ReadDouble()
-                if err3 != nil {
-                    return err3
-                }
-                val = float32(vv)
-            case reflect.Float64:
-                val, err2 = avr.ReadDouble()
-            case reflect.String:
-                val, err2 = avr.ReadString()
-            default:
-                err2 = gerror.Newf("unknow BaseType %s", kind)
-            }
-            if err2 != nil {
-                return err2
-            }
-            x.v = append(x.v, reflect.ValueOf(val).Convert(valueType).Interface().(T)) // 添加解码后的值到列表
+            continue
         }
+        val, err1 := BaseDecode[T](avr)
+        if err1 != nil {
+            return err1
+        }
+        x.v = append(x.v, val) // 添加解码后的值到列表
     }
     return nil
 }

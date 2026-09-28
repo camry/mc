@@ -58,36 +58,40 @@ func (x *ListMessage[T]) Unset(key any, nestedMessages ...IMessage) {
 // vr bson值读取器
 // _ 未使用的参数
 func (x *ListMessage[T]) Decode(vr bson.ValueReader, _ any) error {
-    if vr.Type() == bson.TypeArray {
-        arr, err := vr.ReadArray() // 开始读取数组
-        if err != nil {
-            return err
+    if vr.Type() != bson.TypeArray {
+        return vr.Skip() // 非数组类型（含 null）直接跳过
+    }
+    arr, err := vr.ReadArray() // 开始读取数组
+    if err != nil {
+        return err
+    }
+    for {
+        avr, err1 := arr.ReadValue()      // 读取数组中的每个值
+        if errors.Is(err1, bson.ErrEOA) { // 到达数组末尾
+            break
         }
-        for {
-            avr, err1 := arr.ReadValue()      // 读取数组中的每个值
-            if errors.Is(err1, bson.ErrEOA) { // 到达数组末尾
-                break
-            }
-            if err1 != nil {
-                return err1
-            }
-            if avr.Type() != bson.TypeEmbeddedDocument { // 检查是否为嵌入文档类型
-                continue
-            }
-            // 创建新消息对象
-            val := x.creator(x, x.Len()) // 使用当前长度作为键
-            // 获取解码器
-            decodeMessage, err1 := GetDecode(val)
-            if err1 != nil {
-                return err1
-            }
-            // 解码消息对象
-            err1 = decodeMessage.Decode(avr, val)
-            if err1 != nil {
-                return err1
-            }
-            x.v = append(x.v, val) // 添加解码后的消息对象到列表
+        if err1 != nil {
+            return err1
         }
+        if avr.Type() != bson.TypeEmbeddedDocument { // 跳过非嵌入文档类型的值
+            if err1 = avr.Skip(); err1 != nil {
+                return err1
+            }
+            continue
+        }
+        // 创建新消息对象
+        val := x.creator(x, x.Len()) // 使用当前长度作为键
+        // 获取解码器
+        decodeMessage, err1 := GetDecode(val)
+        if err1 != nil {
+            return err1
+        }
+        // 解码消息对象
+        err1 = decodeMessage.Decode(avr, val)
+        if err1 != nil {
+            return err1
+        }
+        x.v = append(x.v, val) // 添加解码后的消息对象到列表
     }
     return nil
 }
