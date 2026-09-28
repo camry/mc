@@ -3,14 +3,16 @@ package mc
 // MapBaseIncr 递增映射的值
 func MapBaseIncr[K MapKeyType, V BaseTypeNumber](x *MapBase[K, V], key K, value V) V {
     v, _ := x.Get(key)
-    x.Put(key, v+value)
+    v += value
+    x.Put(key, v)
     return v
 }
 
 // MapBaseDecr 递减映射的值
 func MapBaseDecr[K MapKeyType, V BaseTypeNumber](x *MapBase[K, V], key K, value V) V {
     v, _ := x.Get(key)
-    x.Put(key, v-value)
+    v -= value
+    x.Put(key, v)
     return v
 }
 
