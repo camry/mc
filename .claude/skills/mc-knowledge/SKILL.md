@@ -1,10 +1,20 @@
+---
+name: mc-knowledge
+description: mc（Mongo Collector）仓库知识库——架构、类型体系、解码系统、Adapter/Collector 写入链路、MongoTable 查询、protoc-gen-mc 生成代码惯例与常见陷阱。在修改或使用本仓库代码、排查 MongoDB 嵌套文档读写问题时使用。
+---
+
 # mc 仓库知识库
 
 **项目全名**: Mongo Collector  
 **仓库路径**: `D:\project\meigushi\mc`  
 **模块名**: `gitea.meigushi.go/meigushi/mc`  
-**Go 版本**: 1.25+  
-**依赖**: `go.mongodb.org/mongo-driver/v2`、`github.com/samber/lo`、`github.com/spf13/cast`
+**Go 版本**: 1.26+（`go.mod`: `go 1.26.0`）  
+**依赖**:
+- `go.mongodb.org/mongo-driver/v2` v2.9.1
+- `github.com/camry/g/v2`（`gerrors/gerror` 构造错误、`glog` 日志）
+- `github.com/samber/lo`、`github.com/spf13/cast`
+- `golang.org/x/exp`（`constraints.Float`）
+- `github.com/stretchr/testify`（仅测试）
 
 **定位**：简化 MongoDB 复杂嵌套文档操作的 Go 库。开发者像操作普通对象一样操作 MongoDB 文档，无需手动构建字段路径或 BSON 查询。适用于用户属性管理、配置存储、游戏数据存储等频繁操作嵌套文档的场景。
 
@@ -16,7 +26,7 @@ mc 是一个 MongoDB 数据访问层框架，核心思路是：
 
 ```
 MongoDB 文档
-  ↓  FindOne / FindMany（MongoTable / MongoDatabase）
+  ↓  Find（MongoDatabase，读写对象） / FindOne / FindMany（MongoTable，只读对象）
 bson.Raw 字节流
   ↓  bson.NewDocumentReader → IDecode.Decode
   Go struct（MessageTop / MessageSub / ListXxx / MapXxx）
@@ -28,7 +38,23 @@ Collector → CollectorWorker → BulkWrite
 MongoDB 集合
 ```
 
-所有 struct 通过代码生成（`protoc-gen-mc`）产生，生成的文件以 `.pb.mc.go` 结尾。
+所有 struct 通过代码生成（`protoc-gen-mc`，当前 v2.0.6）产生，生成的文件以 `.pb.mc.go` 结尾。示例见 `pb/a.proto` / `pb/a.pb.mc.go`。
+
+### 文件速查
+
+| 文件 | 内容 |
+|------|------|
+| `define.go` | 类型约束、枚举（`MessageType`/`AggregateStage`）、全部接口 |
+| `message_top.go` / `message_sub.go` | 顶级/子级消息 |
+| `list*.go` / `map*.go` | 列表、映射容器 |
+| `utils_map.go` | `MapBaseIncr/MapBaseDecr/MapMessageGetOrPut` 辅助函数 |
+| `decode*.go` | 解码注册与分发 |
+| `utils_decode.go` | 基础类型解码函数 |
+| `utils.go` | `GetStructName`、字段路径拼接、`toMapKey`、`MToValueReader` |
+| `adapter*.go` | 写入聚合层 |
+| `collector*.go` | 按表批量写入层 |
+| `mongo*.go` | Client/Database/Collection/Table 封装 |
+| `*_z_test.go` | 测试（连真实 MongoDB，见 `mongo_z_test.go` 的 `defaultDB`） |
 
 ---
 
@@ -46,67 +72,90 @@ MapKeyType      = BaseTypeInteger | ~string
 - `K BaseType`：主键类型（通常 int64 或 string）
 - `V BaseType` / `V IMessage`：集合/映射的值类型
 
+`~` 约束使 proto 枚举（`type AEnum int32`）可直接作为 List/Map 的元素或键。
+
 ---
 
 ## 三、消息层级结构
 
-### 接口
+### 接口（`define.go`）
 
 | 接口 | 说明 |
 |------|------|
-| `IMessage` | 所有消息基础接口：`MessageType() / Key() / Set() / Unset()` |
+| `IMessage` | 所有消息基础接口：`MessageType() / Key() / Set(key, val, nested...) / Unset(key, nested...)` |
 | `IMessageTop` | 顶级消息，扩展 `IMessage + IMarshalBsonM`，增加 `Table() string` |
 | `IMessageSub` | 子消息，扩展 `IMessage + IMarshalBsonM` |
 | `IMarshalBsonM` | `Marshal() bson.M / Unmarshal(bson.M) error` |
 | `IDecode` | `Decode(vr bson.ValueReader, v any) error` |
+| `IAdapter[T, K]` | `Bind / GetMessageTop / GetKey / Set / Unset / Close` |
+| `IAdapterBsonM` | `AggregateStage() / M() bson.M`（实现为私有 `adapterBsonM`） |
+| `ICollector` | `Database() / Write(table, writeModel, opts...) / Close()` |
+| `ICollectorWorker` | `Write / Run / Close` |
 
 ### 具体结构体
 
 | 类型 | 说明 |
 |------|------|
-| `MessageTop[T, K]` | 顶级节点，持有 `IAdapter`；`Set/Unset` 转发给 Adapter |
+| `MessageTop[T, K]` | 顶级节点，持有 `IAdapter`；`Set/Unset` 转发给 Adapter；**adapter 为 nil 时 Set/Unset 静默忽略、`Key()` 返回 nil** |
 | `MessageSub` | 子节点，持有 `parent IMessage + key any`；`Set/Unset` 追加自身到 nestedMessages 链后向上冒泡 |
-| `List[T]` | 通用有序列表基类，实现 `Append/Remove/Clear/Contains/Find/Filter/ForEach/Values/Marshal` |
-| `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码（`TypeArray`） |
-| `ListMessage[T IMessage]` | 消息对象列表，带 `creator` 工厂；`AppendNewMessage()` 追加新对象 |
-| `Map[T, V]` | 通用映射基类，实现 `Get/Put/Delete/Contains/Size/Keys/Values/GetAll/Range/Clear/Marshal` |
-| `MapBase[T MapKeyType, V BaseType]` | 基础类型映射，实现 BSON document 解码 |
-| `MapMessage[T MapKeyType, V IMessage]` | 消息对象映射，带 `creator` 工厂；`PutNewMessage(key)` 创建并存入 |
+| `List[T]` | 通用有序列表基类：`Len/IsEmpty/Values/Contains(DeepEqual)/Find/Filter/ForEach/Append/Remove(index)/Clear/Marshal` |
+| `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码；**`Remove(item T)` 按值删除**（遮蔽 `List.Remove(index)`） |
+| `ListMessage[T IMessage]` | 消息对象列表，带 `creator` 工厂；`AppendNewMessage()` 以当前长度为 key 创建并追加 |
+| `Map[T, V]` | 通用映射基类：`Get/Contains/Size/IsEmpty/Keys/Values/GetAll(副本)/Range/Clear/Marshal`（**无 Put/Delete**） |
+| `MapBase[T MapKeyType, V BaseType]` | 基础类型映射：`Put(key, value)` → `$set path.key`；`Delete(key)` → `$unset path.key`；实现 BSON document 解码 |
+| `MapMessage[T MapKeyType, V IMessage]` | 消息对象映射，带 `creator` 工厂：`PutNewMessage(key)` 创建、存入并 `$set` 其 Marshal 结果；`Delete(key)` |
+
+### 辅助函数（`utils_map.go`）
+
+| 函数 | 说明 |
+|------|------|
+| `MapBaseIncr(m, key, v)` / `MapBaseDecr(m, key, v)` | 数值映射增减，**返回旧值**（生成代码中的 `IncrXxx/DecrXxx` 返回新值，二者不一致） |
+| `MapMessageGetOrPut(m, key)` | 存在则返回，不存在则 `PutNewMessage` |
 
 ### 字段变更传播路径
 
 ```
 叶子.Set(key, val)
-  → MessageSub.Set：nestedMessages 追加 self，调 parent.Set
+  → MessageSub / ListXxx / MapXxx.Set：nestedMessages 追加 self，调 parent.Set
   → ... 逐层向上 ...
   → MessageTop.Set → Adapter.Set(nestedMessages, key, val)
   → toNestedMessageFieldKey(nestedMessages, key) 构造 "a.b.c.key"
   → write(adapterBsonM{$set, bson.M{"a.b.c.key": val}})
 ```
 
-`toNestedMessageFieldKey` / `toNestedMessageKey` 在 `utils.go` 中，从 nestedMessages 尾部向前拼接点分隔的键路径。
+`toNestedMessageFieldKey` / `toNestedMessageKey` 在 `utils.go` 中，从 nestedMessages 尾部向前拼接点分隔的键路径（键经 `cast.ToString`）。
+
+各容器的写入粒度：
+- `List.Append/Remove/Clear`：**整个数组** `$set x.key = Marshal()`
+- `MapBase.Put` / `MapMessage.PutNewMessage`：单个键 `$set path.key`
+- `Map.Clear`：整个映射 `$set x.key = {}`
+- `MapXxx.Delete`：单个键 `$unset path.key`
 
 ---
 
 ## 四、解码系统
 
-### 注册与查找
+### 注册与查找（`decode.go`）
 
 ```go
 // 生成代码中：
 var xDecode = mc.Register(&X{}, mc.NewDecodePair("field", mc.NewDecodeField(...)), ...)
 
 // 运行时查找：
-decode, err := mc.GetDecode(obj)   // 按 struct 名称查 decodeMap
+decode, err := mc.GetDecode(obj)   // 按 GetStructName(obj)（去指针、不含包名）查 decodeMap
 ```
 
-`Register` → `decodeMap[structName] = *DecodeMessage`
+`Register` → `decodeMap[structName] = *DecodeMessage`（`decodeMap map[string]IDecode`，包级全局，无锁，仅在 init 期写入）。
+
+> 因为以不含包名的结构体名为键，**不同包中同名 message 会互相覆盖**。
 
 ### DecodeMessage.Decode 流程
 
 1. 若 `vr.Type() == TypeNull/Undefined` → 直接消费并返回
 2. `vr.ReadDocument()` 开始读文档
 3. 逐元素：找到 `fieldMap[key]` → `handler.Decode(evr, v)`；否则 `evr.Skip()`
+
+`DecodeField[T]` 把 `v any` 断言成 `T` 后调用生成的 handler。
 
 ### 基础类型解码函数（`utils_decode.go`）
 
@@ -123,7 +172,13 @@ decode, err := mc.GetDecode(obj)   // 按 struct 名称查 decodeMap
 | `StringDecode` | String |
 | `BinaryDecode` | Binary / String(base64) / **Null** / **Undefined** |
 
-> **注意**：`BoolDecode` 和 `StringDecode` 未处理 Null/Undefined——若字段在文档中为 null 会报错。`BinaryDecode` 已修复支持 Null/Undefined（返回 nil, nil）。
+> **注意**：`BoolDecode` 和 `StringDecode` 未处理 Null/Undefined——若字段在文档中为 null 会报错。
+
+### 容器解码
+
+- `ListBase.Decode`：非数组直接忽略；元素类型不在 `Int32/Int64/Double/String` 内则跳过；然后**按目标 T 的 Kind 严格读取**（`reflect.TypeFor[[]T]().Elem().Kind()`），再 `reflect.ValueOf(val).Convert(valueType)` 转成 T（支持枚举）。
+- `ListMessage.Decode`：只处理 `EmbeddedDocument` 元素，其他跳过；元素 key 为当前下标。
+- `MapBase.Decode` / `MapMessage.Decode`：键经 `toMapKey[T](k, kind)` 从字符串转换（支持 int32/int64/uint32/uint64/string 及其派生类型）。
 
 ---
 
@@ -135,15 +190,19 @@ adapter := mc.NewAdapter[*MyMessage, int64](
     mc.WithCollectorWorkerOption[*MyMessage, int64](opts...),
     mc.WithContext[*MyMessage, int64](ctx),
 )
+obj := pb.NewMyMessage(adapter, id) // 内部 Bind(adapter, obj, id)
 ```
 
-**内部机制**：
-- `buffer chan IAdapterBsonM`（默认容量 1000）
-- goroutine `writeCollectorWorker`：ticker（默认 10ms）或 batchSize（默认 10）触发 flush
-- `doBatchAdapterBsonM`：合并同阶段的 `bson.M`，检测父子键冲突（`HasPrefix`），冲突则先 flush 再合并
-- 最终生成 `mongo.UpdateOneModel($set/$unset)` 发送给 `Collector`
+**一个 Adapter 只绑定一个顶级对象**（`Bind` 保存 t、k），每个文档需要各自的 Adapter。
 
-**关闭顺序**：`adapter.Close()` → cancel context → goroutine 消费剩余 buffer → `collector.Write`
+**内部机制**：
+- `buffer chan IAdapterBsonM`（默认容量 1000）；仅在 collector 非 nil 时创建并启动 goroutine
+- goroutine `writeCollectorWorker`：ticker（默认 10ms）或 batchSize（默认 10）触发 flush
+- `doBatchAdapterBsonM`：按顺序合并同阶段的 `bson.M`；阶段切换（$set↔$unset）先 flush；检测父子键冲突（`HasPrefix(k+".")`），冲突则先 flush 再合并；相同键直接覆盖
+- 最终生成 `mongo.UpdateOneModel(filter {_id: key}, $set/$unset)` 交给 `Collector.Write(table, model, collectorWorkerOption...)`
+- Adapter 的 bufferSize/batchSize/flushInterval **没有对应 Option**，只能用默认值
+
+**关闭顺序**：`adapter.Close()` → cancel context → goroutine close(buffer) 并消费剩余数据 → `collector.Write`。`Close()` **不等待** goroutine 结束。
 
 ---
 
@@ -153,10 +212,11 @@ adapter := mc.NewAdapter[*MyMessage, int64](
 collector := mc.NewCollector(ctx, db)
 ```
 
-- 每张表懒初始化一个 `CollectorWorker`（加读写锁保护）
-- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）
-- `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`
-- `Close()` 并发关闭所有 worker
+- 每张表懒初始化一个 `CollectorWorker`（首次 `Write` 时创建并 `go worker.Run()`）
+- `CollectorWorkerOption` 仅在该表 worker **首次创建时生效**，之后传入的选项被忽略
+- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval` 调整
+- `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`（错误只打日志，不重试）
+- `Close()` 清空 worker 映射并并发调用各 worker 的 `Close()`（仅 cancel，**不等待**剩余数据写完）
 
 ---
 
@@ -165,14 +225,16 @@ collector := mc.NewCollector(ctx, db)
 三层封装，主要是注入 `context.Context`：
 
 ```
+mc.NewMongoClient(ctx, opts...)   // Connect + Ping(Primary)
 MongoClient.Database(name) → MongoDatabase
 MongoDatabase.Collection(name) → MongoCollection
+MongoClient.Close()               // Disconnect
 ```
 
-`MongoDatabase.Find(top IMessageTop)`：
+`MongoDatabase.Find(top IMessageTop)`（用于已通过 `NewX(adapter, k)` 创建、带 Adapter 的对象）：
 - `FindOne(_id=top.Key())`
 - 若 `ErrNoDocuments` → `InsertOne(top.Marshal())`（自动创建文档）
-- 否则用 `decode.Decode` 反序列化
+- 否则用 `decode.Decode` 反序列化到 top
 
 ---
 
@@ -181,17 +243,26 @@ MongoDatabase.Collection(name) → MongoCollection
 ```go
 table := mc.NewMongoTable[*MyMessage, int64](db)
 
-obj, err := table.FindOne(id)       // 查单条
+obj, err := table.FindOne(id)       // 查单条；无文档时返回 mongo.ErrNoDocuments
 list, err := table.FindMany(ids)    // 查多条（$in 查询，batchSize=2048）
 ```
 
-**FindOne**：用 `var zero T` 作为泛型零值返回（不能用 nil）；反序列化用 `bson.NewDocumentReader(bytes.NewReader(bsonRaw))`。
-
-**FindMany**：同样通过游标逐条解码；每次循环用 `reflect.New(t).Interface().(T)` 创建新对象。
+- 用 `reflect.TypeFor[T]().Elem()` + `reflect.New(t).Interface().(T)` 创建对象，**不绑定 Adapter**：得到的对象调用 Setter 只改内存，不会写库；`Key()` 返回 nil（用 `GetXId()` 取主键）。
+- **FindOne**：失败时用 `var zero T` 返回泛型零值；反序列化用 `bson.NewDocumentReader(bytes.NewReader(bsonRaw))`。
+- **FindMany**：游标逐条解码，每次循环新建对象；返回顺序为 Mongo 游标顺序（不保证与 ids 一致），不存在的 id 直接缺失。
 
 ---
 
 ## 九、代码生成惯例（`.pb.mc.go`）
+
+命名规则：
+- 表名 `Table()` = message 名（如 `"A"`）
+- BSON 字段名 = proto 字段转 lowerCamel（`a_nickname_alias` → `aNicknameAlias`，`d_list` → `dList`）
+- `_id` 字段 Getter 为 `GetXId()`，无 Setter
+- proto enum → `type AEnum int32` + 常量 `AEnum_A_ENUM_0`，解码用 `mc.EnumDecode[AEnum]`
+- `repeated 基础类型/枚举` → `*mc.ListBase[T]`；`repeated Message` → `*mc.ListMessage[*M]`
+- `map<K, 基础类型/枚举>` → `*mc.MapBase[K, V]`；`map<K, Message>` → `*mc.MapMessage[K, *M]`
+- `bytes` → `[]byte` + `mc.BinaryDecode`
 
 生成文件的固定模式：
 
@@ -200,20 +271,20 @@ list, err := table.FindMany(ids)    // 查多条（$in 查询，batchSize=2048�
 // 2. 注册解码器
 var xDecode = mc.Register(&X{},
     mc.NewDecodePair("fieldName", mc.NewDecodeField(func(vr bson.ValueReader, v *X) (err error) {
-        v.field, err = mc.Int64Decode(vr)  // 或其他 XxxDecode
+        v.field, err = mc.Int64Decode(vr)  // 或其他 XxxDecode / 子消息 yDecode.Decode / 容器 .Decode
         return
     })),
     ...
 )
-// 3. 构造函数 NewX(adapter, k)
+// 3. 构造函数 NewX(adapter, k)：设置 _id 并 Bind(adapter, x, k)
 // 4. Table() string
 // 5. Marshal() bson.M
-// 6. Unmarshal(bson.M) error
-// 7. Getter/Setter（含 Incr/Decr for 数值）
-// 8. 子消息用 newX(parent, key)，MessageSub 嵌入
+// 6. Unmarshal(bson.M) error（MToValueReader + decode）
+// 7. Getter/Setter（数值额外有 Incr/Decr，返回新值）
+// 8. 子消息用 newX(parent, key)，MessageSub 嵌入；子消息字段有 UnsetX()
 ```
 
-子消息字段的 Getter 带懒初始化：
+子消息 / 容器字段的 Getter 带懒初始化：
 ```go
 func (x *A) GetB() *B {
     if x.b == nil { x.b = newB(x, "b") }
@@ -230,7 +301,7 @@ func (x *A) GetB() *B {
 protoc --mc_out=./pb pb/*.proto
 ```
 
-典型用法（来自 README）：
+典型用法：
 ```go
 // 1. 连接
 client, _ := mc.NewMongoClient(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
@@ -244,16 +315,22 @@ adapter := mc.NewAdapter[*pb.A, int64](
     mc.WithCollectorWorkerOption[*pb.A, int64](mc.WithCollectorWorkerFlushInterval(100*time.Millisecond)),
 )
 
-// 3. 创建对象并操作嵌套字段
+// 3. 创建对象（可选：db.Find(a) 加载已有文档，不存在则插入）
 a := pb.NewA(adapter, 2)
+_ = db.Find(a)
+
+// 4. 操作嵌套字段
 a.SetAUsername("camry")
 a.GetB().GetC().GetD().SetId(math.MaxInt32)
 a.GetB().GetC().GetD().SetBytes([]byte("hello"))
 a.GetB().GetC().GetD().GetTags().Append("tag3")
+a.GetB().GetC().GetTagMap().Put("k", pb.AEnum_A_ENUM_1)
+mc.MapMessageGetOrPut(a.GetB().GetC().GetDMap(), 1).SetUid(100)
 
-// 4. 等待异步写入完成后关闭
+// 5. 等待异步写入完成后关闭（Close 均不阻塞等待）
 time.Sleep(5 * time.Second)
-collector.Close()
+_ = adapter.Close()
+_ = collector.Close()
 ```
 
 ---
@@ -262,14 +339,22 @@ collector.Close()
 
 1. **泛型零值**：`FindOne/FindMany` 的 error 返回必须用 `var zero T; return zero, err`，不能 `return nil, err`。
 
-2. **BinaryDecode null**：`[]byte` 字段在 MongoDB 中可能为 null，`BinaryDecode` 已增加 `TypeNull/TypeUndefined` 处理。
+2. **reflect.TypeFor[T]().Elem()**：比 `reflect.TypeOf(new(T)).Elem().Elem()` 更简洁，二者等价（需 Go 1.22+），仓库已统一使用 `reflect.TypeFor`。
 
-3. **reflect.TypeFor[T]().Elem()**：比 `reflect.TypeOf(new(T)).Elem().Elem()` 更简洁，二者等价（需 Go 1.22+）。
+3. **Adapter 无 Collector 时静默失败**：`Set/Unset` 若 `collector == nil` 只打 error 日志，不 panic；MessageTop 无 Adapter（如 MongoTable 查出的对象）时 Set/Unset 直接忽略。
 
-4. **Adapter 无 Collector 时静默失败**：`Set/Unset` 若 `collector == nil` 只打 error 日志，不 panic。
+4. **父子键冲突**：同一 batch 中若出现 `"a"` 和 `"a.b"` 两个字段，Adapter 会自动 flush 拆分，避免 MongoDB `Conflicting mods` 错误。
 
-5. **父子键冲突**：同一 batch 中若出现 `"a"` 和 `"a.b"` 两个字段，Adapter 会自动 flush 拆分，避免 MongoDB `Conflicting mods` 错误。
+5. **关闭不阻塞**：`Adapter.Close()` / `Collector.Close()` 只 cancel context，剩余数据由后台 goroutine 异步刷出；进程退出前需预留时间（测试中用 `time.Sleep`）。先关 Adapter 再关 Collector，否则 Adapter 的最后一批可能在 Collector 清空后重新创建 worker。
 
-6. **ListBase 枚举解码**：`ListBase[AEnum]` 使用 `reflect.TypeFor[[]T]().Elem()` 获取底层 Kind，再 `reflect.ValueOf(val).Convert(targetType)` 完成类型转换。
+6. **ListBase/MapBase 值解码严格按目标 Kind**：不像 `Int64Decode` 那样容忍跨类型——例如 `ListBase[int32]` 遇到 Int64/Double 元素会读取报错；`ListBase[float64]` 遇到整数元素同样报错。且 switch 中**不支持 uint32/uint64 值类型**（走 default 返回 `unknow BaseType`），尽管约束允许。
 
-7. **MapBase/MapMessage null 元素**：遇到单个 value 为 null/undefined 时直接 return（整个 map 解码中止），不是跳过——如需容忍可改为 `continue`。
+7. **MapBase/MapMessage null 元素**：遇到单个 value 为 null/undefined 时直接 return（整个 map 解码中止，后续键丢失），不是跳过——如需容忍可改为 `continue`。
+
+8. **ListMessage 元素 key 固定为创建时下标**：`Remove(index)` 后，后续元素的 key 不会重排，再对它们 `Set` 会写到错误的数组下标路径。删除后需重建列表或整体重写。
+
+9. **Collector 懒加载无二次检查**：`Write` 在 RLock 判断不存在后直接 Lock 创建，并发首次写同一张表时可能创建多个 worker（后者覆盖前者，前者 goroutine 泄漏）。
+
+10. **同名结构体冲突**：`decodeMap` 以不含包名的结构体名为键，跨包同名 message 会覆盖彼此的解码器。
+
+11. **MapBaseIncr/Decr 返回旧值**，生成代码 `IncrXxx/DecrXxx` 返回新值，使用时注意区分。
