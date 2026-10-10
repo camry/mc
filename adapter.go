@@ -3,6 +3,7 @@ package mc
 import (
     "context"
     "strings"
+    "sync"
     "time"
 
     "github.com/camry/g/v2/glog"
@@ -24,6 +25,9 @@ type Adapter[T IMessageTop, K BaseType] struct {
     bufferSize            int                     // bufferSize 缓冲区大小
     batchSize             int                     // batchSize 批量大小
     flushInterval         time.Duration           // flushInterval 刷新间隔
+    mu                    sync.RWMutex            // mu 保护 closed 与 buffer 的关闭，写入持读锁，关闭持写锁
+    closed                bool                    // closed 是否已关闭
+    done                  chan struct{}           // done 后台协程退出信号（剩余数据已全部交给收集器）
 }
 
 // NewAdapter 创建新的适配器实例
@@ -44,8 +48,10 @@ func NewAdapter[T IMessageTop, K BaseType](opts ...AdapterOption[T, K]) *Adapter
     x.cancel = cancel
     if x.collector != nil {
         x.buffer = make(chan IAdapterBsonM, x.bufferSize)
+        x.done = make(chan struct{})
         go x.writeCollectorWorker()
     }
+    context.AfterFunc(x.ctx, x.shutdown) // 外部上下文取消时同样停止接收写入
     return x
 }
 
@@ -95,17 +101,34 @@ func (x *Adapter[T, K]) Unset(nestedMessages []IMessage, key any) {
 }
 
 // write 写入数据到缓冲区
+// 持读锁发送：关闭方需持写锁才能 close(buffer)，因此不会向已关闭的通道发送；
+// 缓冲区满时阻塞等待后台协程消费，后台协程不依赖该锁，不会死锁。
 func (x *Adapter[T, K]) write(abm IAdapterBsonM) {
-    select {
-    case x.buffer <- abm:
-    case <-x.ctx.Done():
-        // 上下文已完成，无法发送
-        glog.Warnf("Adapter Table %s Write Context Done", x.t.Table())
+    x.mu.RLock()
+    defer x.mu.RUnlock()
+    if x.closed || x.ctx.Err() != nil { // AfterFunc 异步执行 shutdown，取消后立即拒绝写入
+        glog.Warnf("Adapter Table %s Write After Closed", x.t.Table())
+        return
+    }
+    x.buffer <- abm
+}
+
+// shutdown 停止接收写入并关闭缓冲区通道，可重复调用
+func (x *Adapter[T, K]) shutdown() {
+    x.mu.Lock()
+    defer x.mu.Unlock()
+    if x.closed {
+        return
+    }
+    x.closed = true
+    if x.buffer != nil {
+        close(x.buffer) // 后台协程消费完剩余数据后退出
     }
 }
 
-// writeCollectorWorker 写入数据到收集器工作器
+// writeCollectorWorker 写入数据到收集器工作器，缓冲区通道关闭且剩余数据处理完毕后退出
 func (x *Adapter[T, K]) writeCollectorWorker() {
+    defer close(x.done)
     ticker := time.NewTicker(x.flushInterval)
     defer ticker.Stop()
     batchAdapterBsonM := make([]IAdapterBsonM, 0, x.batchSize)
@@ -117,6 +140,7 @@ func (x *Adapter[T, K]) writeCollectorWorker() {
                 if len(batchAdapterBsonM) > 0 {
                     x.doBatchAdapterBsonM(batchAdapterBsonM)
                 }
+                glog.Debugf("Adapter writeCollectorWorker Table %s Closed", x.t.Table())
                 return
             }
             batchAdapterBsonM = append(batchAdapterBsonM, data)
@@ -130,23 +154,6 @@ func (x *Adapter[T, K]) writeCollectorWorker() {
                 batchAdapterBsonM = batchAdapterBsonM[:0]
                 glog.Debugf("Adapter writeCollectorWorker Table %s Flush Interval", x.t.Table())
             }
-        case <-x.ctx.Done():
-            // 关闭缓冲区通道，让剩余数据被处理
-            close(x.buffer)
-            // 继续处理缓冲区中的剩余数据直到通道关闭
-            for data := range x.buffer {
-                batchAdapterBsonM = append(batchAdapterBsonM, data)
-                if len(batchAdapterBsonM) >= x.batchSize {
-                    x.doBatchAdapterBsonM(batchAdapterBsonM)
-                    batchAdapterBsonM = batchAdapterBsonM[:0]
-                }
-            }
-            // 处理最后一批数据
-            if len(batchAdapterBsonM) > 0 {
-                x.doBatchAdapterBsonM(batchAdapterBsonM)
-            }
-            glog.Debugf("Adapter writeCollectorWorker Table %s Context Done", x.t.Table())
-            return
         }
     }
 }
@@ -207,8 +214,13 @@ func (x *Adapter[T, K]) doBatchAdapterBsonM(batchAdapterBsonMList []IAdapterBson
     flush()
 }
 
-// Close 关闭适配器
+// Close 关闭适配器，阻塞直到剩余数据全部交给收集器，可重复调用
+// 须在关闭收集器之前调用，否则剩余数据会被已关闭的收集器丢弃
 func (x *Adapter[T, K]) Close() error {
     x.cancel()
+    x.shutdown()
+    if x.done != nil {
+        <-x.done
+    }
     return nil
 }

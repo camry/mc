@@ -19,3 +19,8 @@ func WithCollectorWorkerBatchSize(batchSize int) CollectorWorkerOption {
 func WithCollectorWorkerFlushInterval(flushInterval time.Duration) CollectorWorkerOption {
     return func(x *CollectorWorker) { x.flushInterval = flushInterval }
 }
+
+// WithCollectorWorkerWriteTimeout 单次 BulkWrite 超时时间，<=0 表示不限制
+func WithCollectorWorkerWriteTimeout(writeTimeout time.Duration) CollectorWorkerOption {
+    return func(x *CollectorWorker) { x.writeTimeout = writeTimeout }
+}
