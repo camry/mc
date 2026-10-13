@@ -219,9 +219,9 @@ collector := mc.NewCollector(ctx, db)
 
 - 每张表懒初始化一个 `CollectorWorker`（首次 `Write` 时经 `getOrCreateWorker` 创建并 `go worker.Run()`；**二次检查**避免并发首写同表创建多个 worker）
 - `CollectorWorkerOption` 仅在该表 worker **首次创建时生效**，之后传入的选项被忽略
-- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）、writeTimeout（默认 10s）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval/WriteTimeout` 调整
-- `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`（错误只打日志，不重试）；缓冲区通道关闭且剩余数据写完才退出（`defer close(done)`）
-- `doBatchWriteModel`：`BulkWrite` 用 `context.WithoutCancel(db.Context())` + 可选 `writeTimeout` 超时（<=0 不限制）
+- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）、writeTimeout（默认 10s）、maxRetries（默认 3）、retryBaseDelay（默认 100ms）、retryMaxDelay（默认 2s）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval/WriteTimeout/MaxRetries/RetryBaseDelay/RetryMaxDelay` 调整
+- `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`；缓冲区通道关闭且剩余数据写完才退出（`defer close(done)`）
+- `doBatchWriteModel`：`BulkWrite` 用 `context.WithoutCancel(db.Context())` + 可选 `writeTimeout` 超时（<=0 不限制）；**失败即重试**（任何错误都重试）：指数退避 `retryBaseDelay*2^(n-1)` 封顶 `retryMaxDelay`、再加抖动 `[d/2, d]`，退避等待可被 `ctx.Done()` 打断；重试耗尽后逐条 `%+v` 记录被丢弃的模型（不静默丢）
 - `Close()`：置 closed、清空 worker 映射，并发调用各 worker 的 `Close()`（`sync.WaitGroup.Go`，Go 1.26）并 `wg.Wait()` **阻塞等待**所有剩余数据写完；关闭后 `Write` 被丢弃并告警
 - `CollectorWorker.Close()`：`cancel()` → `shutdown()`（close buffer）→ `<-done` 阻塞等待，可重复调用
 
@@ -351,7 +351,7 @@ _ = collector.Close()
 
 4. **父子键冲突**：同一 batch 中若出现 `"a"` 和 `"a.b"` 两个字段，Adapter 会自动 flush 拆分，避免 MongoDB `Conflicting mods` 错误。
 
-5. **关闭顺序与阻塞语义**：`Adapter.Close()` / `Collector.Close()` / `CollectorWorker.Close()` 现在会**阻塞等待**剩余数据刷出（`<-done`），可重复调用。须**先关所有 Adapter 再关 Collector**——反之 Adapter 最后一批会因 Collector 已关闭被丢弃（日志 `Write After Closed`）。`BulkWrite` 失败只打日志不重试，故 Close 返回不代表数据已落库。
+5. **关闭顺序与阻塞语义**：`Adapter.Close()` / `Collector.Close()` / `CollectorWorker.Close()` 现在会**阻塞等待**剩余数据刷出（`<-done`），可重复调用。须**先关所有 Adapter 再关 Collector**——反之 Adapter 最后一批会因 Collector 已关闭被丢弃（日志 `Write After Closed`）。`BulkWrite` 失败会按 `maxRetries` 重试，重试耗尽仅记录丢弃模型、不保证落库，故 Close 返回不代表数据已落库。
 
 6. **ListBase/MapBase 值解码先过 `canBaseDecode` 源类型门**：仅源 bson 类型为 Int32/Int64/Double/String 才解码，其余（Boolean、null/undefined 等）被 `Skip` 跳过；数值目标类型间经 `BaseDecode` 宽松转换（int/uint/float 跨类型兼容），uint32/uint64 现已支持。
 
