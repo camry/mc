@@ -11,7 +11,7 @@ import (
 func defaultDB(names ...string) (*mc.MongoDatabase, error) {
     c, err := mc.NewMongoClient(
         context.Background(),
-        options.Client().ApplyURI("mongodb://root:Bbh7aFx43Nvmpc0H@192.168.11.77:27017/"),
+        options.Client().ApplyURI("mongodb://root:xxx@127.0.0.1:27017/"),
     )
     if err != nil {
         return nil, err
