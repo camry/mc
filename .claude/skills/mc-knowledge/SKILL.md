@@ -12,7 +12,7 @@ description: mc（Mongo Collector）仓库知识库——架构、类型体系�
 **依赖**:
 - `go.mongodb.org/mongo-driver/v2` v2.9.1
 - `github.com/camry/g/v2`（`gerrors/gerror` 构造错误、`glog` 日志）
-- `github.com/samber/lo`、`github.com/spf13/cast`
+- `github.com/spf13/cast`
 - `golang.org/x/exp`（`constraints.Float`）
 - `github.com/stretchr/testify`（仅测试）
 
@@ -109,7 +109,7 @@ MapKeyType      = BaseTypeInteger | ~string
 
 | 函数 | 说明 |
 |------|------|
-| `MapBaseIncr(m, key, v)` / `MapBaseDecr(m, key, v)` | 数值映射增减，**返回旧值**（生成代码中的 `IncrXxx/DecrXxx` 返回新值，二者不一致） |
+| `MapBaseIncr(m, key, v)` / `MapBaseDecr(m, key, v)` | 数值映射增减，返回**新值**（与生成代码 `IncrXxx/DecrXxx` 一致） |
 | `MapMessageGetOrPut(m, key)` | 存在则返回，不存在则 `PutNewMessage` |
 
 ### 字段变更传播路径
@@ -168,17 +168,19 @@ decode, err := mc.GetDecode(obj)   // 按 GetStructName(obj)（去指针、不�
 | `EnumDecode[T ~int32]` | 委托 Int64Decode |
 | `Float64Decode` | Int32 / Int64 / Boolean / Double / **Null** / **Undefined** |
 | `Float32Decode` | 委托 Float64Decode |
-| `BoolDecode` | Boolean |
-| `StringDecode` | String |
+| `BoolDecode` | Boolean / **Null** / **Undefined**（null→false） |
+| `StringDecode` | String / **Null** / **Undefined**（null→""） |
 | `BinaryDecode` | Binary / String(base64) / **Null** / **Undefined** |
+| `BaseDecode[T BaseType]` | 泛型解码入口：按 `T` 的 Kind 分发到上述各函数，最后 `reflect.Convert` 转成 T（支持枚举等派生类型） |
+| `canBaseDecode[T BaseType](t)` | 判断源 bson 类型是否可解码：**仅 Int32 / Int64 / Double / String**（不含 Boolean） |
 
-> **注意**：`BoolDecode` 和 `StringDecode` 未处理 Null/Undefined——若字段在文档中为 null 会报错。
+> **注意**：`canBaseDecode` 门只放行 Int32/Int64/Double/String 源类型，Boolean/null/undefined 等源值在容器解码时被 `Skip` 跳过。`BaseDecode` 的 `BoolDecode` 分支实际只服务于 struct 的 bool 字段（`bool` 不在 `BaseType` 约束内，无法作为 List/Map 的值类型）。
 
 ### 容器解码
 
-- `ListBase.Decode`：非数组直接忽略；元素类型不在 `Int32/Int64/Double/String` 内则跳过；然后**按目标 T 的 Kind 严格读取**（`reflect.TypeFor[[]T]().Elem().Kind()`），再 `reflect.ValueOf(val).Convert(valueType)` 转成 T（支持枚举）。
-- `ListMessage.Decode`：只处理 `EmbeddedDocument` 元素，其他跳过；元素 key 为当前下标。
-- `MapBase.Decode` / `MapMessage.Decode`：键经 `toMapKey[T](k, kind)` 从字符串转换（支持 int32/int64/uint32/uint64/string 及其派生类型）。
+- `ListBase.Decode`：非数组 → `vr.Skip()`；元素源类型不在 `canBaseDecode[T]` 放行集内则 `Skip` 跳过；否则用 `BaseDecode[T]` 宽松转换（数值类型互相兼容，支持 uint32/uint64/bool/string 及枚举等派生类型）。
+- `ListMessage.Decode`：非数组 → `vr.Skip()`；只处理 `EmbeddedDocument` 元素（其他 `Skip` 跳过）；元素 key 为当前下标。
+- `MapBase.Decode` / `MapMessage.Decode`：非 `EmbeddedDocument` → `vr.Skip()`；值源类型不可解码或为 null/undefined → `Skip` 并 `continue`（**不再中止整个 map 解码**）；键经 `toMapKey[T](k, reflect.TypeFor[T]().Kind())` 转换（支持 int32/int64/uint32/uint64/string 及其派生类型）。
 
 ---
 
@@ -197,12 +199,15 @@ obj := pb.NewMyMessage(adapter, id) // 内部 Bind(adapter, obj, id)
 
 **内部机制**：
 - `buffer chan IAdapterBsonM`（默认容量 1000）；仅在 collector 非 nil 时创建并启动 goroutine
-- goroutine `writeCollectorWorker`：ticker（默认 10ms）或 batchSize（默认 10）触发 flush
+- goroutine `writeCollectorWorker`：ticker（默认 10ms）或 batchSize（默认 10）触发 flush；缓冲区通道关闭且剩余数据 flush 完才退出（`defer close(done)`）
 - `doBatchAdapterBsonM`：按顺序合并同阶段的 `bson.M`；阶段切换（$set↔$unset）先 flush；检测父子键冲突（`HasPrefix(k+".")`），冲突则先 flush 再合并；相同键直接覆盖
 - 最终生成 `mongo.UpdateOneModel(filter {_id: key}, $set/$unset)` 交给 `Collector.Write(table, model, collectorWorkerOption...)`
 - Adapter 的 bufferSize/batchSize/flushInterval **没有对应 Option**，只能用默认值
 
-**关闭顺序**：`adapter.Close()` → cancel context → goroutine close(buffer) 并消费剩余数据 → `collector.Write`。`Close()` **不等待** goroutine 结束。
+**并发与关闭**：
+- `mu sync.RWMutex` 保护 `closed` 与 `close(buffer)`：`write` 持读锁、`shutdown` 持写锁，因此不会向已关闭的 channel 发送（`write` 先判断 `closed || ctx.Err()`，命中则告警丢弃）
+- `context.AfterFunc(ctx, shutdown)`：外部 context 取消时同样停止接收写入并关闭 buffer
+- `adapter.Close()`：`cancel()` → `shutdown()`（置 closed + close(buffer)）→ `<-done` **阻塞等待**剩余数据全部交给 Collector；可重复调用；须在 `collector.Close()` 之前调用
 
 ---
 
@@ -212,11 +217,13 @@ obj := pb.NewMyMessage(adapter, id) // 内部 Bind(adapter, obj, id)
 collector := mc.NewCollector(ctx, db)
 ```
 
-- 每张表懒初始化一个 `CollectorWorker`（首次 `Write` 时创建并 `go worker.Run()`）
+- 每张表懒初始化一个 `CollectorWorker`（首次 `Write` 时经 `getOrCreateWorker` 创建并 `go worker.Run()`；**二次检查**避免并发首写同表创建多个 worker）
 - `CollectorWorkerOption` 仅在该表 worker **首次创建时生效**，之后传入的选项被忽略
-- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval` 调整
-- `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`（错误只打日志，不重试）
-- `Close()` 清空 worker 映射并并发调用各 worker 的 `Close()`（仅 cancel，**不等待**剩余数据写完）
+- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）、writeTimeout（默认 10s）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval/WriteTimeout` 调整
+- `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`（错误只打日志，不重试）；缓冲区通道关闭且剩余数据写完才退出（`defer close(done)`）
+- `doBatchWriteModel`：`BulkWrite` 用 `context.WithoutCancel(db.Context())` + 可选 `writeTimeout` 超时（<=0 不限制）
+- `Close()`：置 closed、清空 worker 映射，并发调用各 worker 的 `Close()`（`sync.WaitGroup.Go`，Go 1.26）并 `wg.Wait()` **阻塞等待**所有剩余数据写完；关闭后 `Write` 被丢弃并告警
+- `CollectorWorker.Close()`：`cancel()` → `shutdown()`（close buffer）→ `<-done` 阻塞等待，可重复调用
 
 ---
 
@@ -327,8 +334,7 @@ a.GetB().GetC().GetD().GetTags().Append("tag3")
 a.GetB().GetC().GetTagMap().Put("k", pb.AEnum_A_ENUM_1)
 mc.MapMessageGetOrPut(a.GetB().GetC().GetDMap(), 1).SetUid(100)
 
-// 5. 等待异步写入完成后关闭（Close 均不阻塞等待）
-time.Sleep(5 * time.Second)
+// 5. 先关 Adapter 再关 Collector（两者均阻塞等待剩余数据刷出）
 _ = adapter.Close()
 _ = collector.Close()
 ```
@@ -345,16 +351,16 @@ _ = collector.Close()
 
 4. **父子键冲突**：同一 batch 中若出现 `"a"` 和 `"a.b"` 两个字段，Adapter 会自动 flush 拆分，避免 MongoDB `Conflicting mods` 错误。
 
-5. **关闭不阻塞**：`Adapter.Close()` / `Collector.Close()` 只 cancel context，剩余数据由后台 goroutine 异步刷出；进程退出前需预留时间（测试中用 `time.Sleep`）。先关 Adapter 再关 Collector，否则 Adapter 的最后一批可能在 Collector 清空后重新创建 worker。
+5. **关闭顺序与阻塞语义**：`Adapter.Close()` / `Collector.Close()` / `CollectorWorker.Close()` 现在会**阻塞等待**剩余数据刷出（`<-done`），可重复调用。须**先关所有 Adapter 再关 Collector**——反之 Adapter 最后一批会因 Collector 已关闭被丢弃（日志 `Write After Closed`）。`BulkWrite` 失败只打日志不重试，故 Close 返回不代表数据已落库。
 
-6. **ListBase/MapBase 值解码严格按目标 Kind**：不像 `Int64Decode` 那样容忍跨类型——例如 `ListBase[int32]` 遇到 Int64/Double 元素会读取报错；`ListBase[float64]` 遇到整数元素同样报错。且 switch 中**不支持 uint32/uint64 值类型**（走 default 返回 `unknow BaseType`），尽管约束允许。
+6. **ListBase/MapBase 值解码先过 `canBaseDecode` 源类型门**：仅源 bson 类型为 Int32/Int64/Double/String 才解码，其余（Boolean、null/undefined 等）被 `Skip` 跳过；数值目标类型间经 `BaseDecode` 宽松转换（int/uint/float 跨类型兼容），uint32/uint64 现已支持。
 
-7. **MapBase/MapMessage null 元素**：遇到单个 value 为 null/undefined 时直接 return（整个 map 解码中止，后续键丢失），不是跳过——如需容忍可改为 `continue`。
+7. **MapBase/MapMessage null 值**：遇到单个 value 为 null/undefined（或不可解码类型）时 `Skip` 并 `continue`，**不再中止整个 map 解码**——该键在结果 map 中缺失（而非报错或丢弃后续键）。
 
 8. **ListMessage 元素 key 固定为创建时下标**：`Remove(index)` 后，后续元素的 key 不会重排，再对它们 `Set` 会写到错误的数组下标路径。删除后需重建列表或整体重写。
 
-9. **Collector 懒加载无二次检查**：`Write` 在 RLock 判断不存在后直接 Lock 创建，并发首次写同一张表时可能创建多个 worker（后者覆盖前者，前者 goroutine 泄漏）。
+9. **Collector 懒加载现用二次检查**：`getOrCreateWorker` 在写锁内二次查表，并发首次写同一张表只会创建一个 worker（此前无二次检查会泄漏 goroutine）。worker 被并发关闭后，`Write` 会被丢弃并告警，不会 panic。
 
 10. **同名结构体冲突**：`decodeMap` 以不含包名的结构体名为键，跨包同名 message 会覆盖彼此的解码器。
 
-11. **MapBaseIncr/Decr 返回旧值**，生成代码 `IncrXxx/DecrXxx` 返回新值，使用时注意区分。
+11. **MapBaseIncr/Decr 返回新值**，与生成代码 `IncrXxx/DecrXxx` 一致（此前返回旧值，已修复）。
