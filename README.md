@@ -22,7 +22,7 @@ MongoDB 文档操作，并能够自动处理复杂的嵌套结构。项目通过
 
 #### 列表类型
 
-- **ListBase[T BaseType]**: 基础类型列表（int32, int64, float32, float64, string）
+- **ListBase[T BaseType]**: 基础类型列表（int32, int64, uint32, uint64, float32, float64, string）
 - **ListMessage[T IMessage]**: 消息对象列表
 
 #### 映射类型
@@ -146,14 +146,23 @@ func main() {
     // 操作嵌套列表
     a.GetB().GetC().GetD().GetTags().Append("tag3")
 
-    // 等待批量写入完成
-    time.Sleep(5 * time.Second)
-
-    // 关闭收集器
+    // 关闭（均阻塞等待剩余数据刷出，须先关 Adapter 再关 Collector）
+    _ = adapter.Close()
     _ = collector.Close()
 
     glog.Infof("Final object: %v", a.Marshal())
 }
+```
+
+### 只读查询
+
+对不需要写回的查询，用 `MongoTable` 创建**不绑定 Adapter** 的对象（此时 `Set` 只改内存、不写库，`Key()` 返回 nil）：
+
+```go
+table := mc.NewMongoTable[*pb.A, int64](db)
+
+a, err := table.FindOne(2)                    // 查单条；无文档时返回 mongo.ErrNoDocuments
+list, err := table.FindMany([]int64{2, 3})    // 按 _id 批量查（$in，batchSize=2048）
 ```
 
 ## 设计原理
