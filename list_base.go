@@ -88,9 +88,9 @@ func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
 }
 
 // Remove 根据值移除列表中的元素
-// item 要移除的元素
-func (x *ListBase[T]) Remove(item T) {
-    index := slices.Index(x.v, item) // 查找元素索引
+// value 要移除的元素
+func (x *ListBase[T]) Remove(value T) {
+    index := slices.Index(x.v, value) // 查找元素索引
     if index == -1 {
         return // 元素不存在，直接返回
     }

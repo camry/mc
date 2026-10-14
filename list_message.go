@@ -98,7 +98,7 @@ func (x *ListMessage[T]) Decode(vr bson.ValueReader, _ any) error {
 
 // AppendNewMessage 向列表追加一个新的消息对象并返回该对象
 func (x *ListMessage[T]) AppendNewMessage() T {
-    item := x.creator(x, x.Len()) // 使用当前长度作为键创建新消息对象
-    x.Append(item)                // 添加到列表
-    return item                   // 返回新创建的对象
+    value := x.creator(x, x.Len()) // 使用当前长度作为键创建新消息对象
+    x.Append(value)                // 添加到列表
+    return value                   // 返回新创建的对象
 }

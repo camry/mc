@@ -46,10 +46,10 @@ func (x *List[T]) Values() []T {
 }
 
 // Contains 检查列表是否包含指定元素
-// item 要检查的元素
-func (x *List[T]) Contains(item T) bool {
+// value 要检查的元素
+func (x *List[T]) Contains(value T) bool {
     for _, v := range x.v {
-        if reflect.DeepEqual(v, item) { // 使用深度相等比较
+        if reflect.DeepEqual(v, value) { // 使用深度相等比较
             return true
         }
     }
@@ -58,7 +58,7 @@ func (x *List[T]) Contains(item T) bool {
 
 // Find 在列表中查找满足条件的元素
 // predicate 判断元素是否满足条件的函数
-func (x *List[T]) Find(predicate func(item T) bool) (T, bool) {
+func (x *List[T]) Find(predicate func(value T) bool) (T, bool) {
     for _, v := range x.v {
         if predicate(v) {
             return v, true
@@ -70,7 +70,7 @@ func (x *List[T]) Find(predicate func(item T) bool) (T, bool) {
 
 // Filter 过滤出满足条件的元素
 // predicate 判断元素是否满足条件的函数
-func (x *List[T]) Filter(predicate func(item T) bool) []T {
+func (x *List[T]) Filter(predicate func(value T) bool) []T {
     result := make([]T, 0, len(x.v)) // 预分配容量
     for _, v := range x.v {
         if predicate(v) {
@@ -80,18 +80,20 @@ func (x *List[T]) Filter(predicate func(item T) bool) []T {
     return result
 }
 
-// ForEach 对列表中每个元素执行指定函数
+// Range 对列表中每个元素执行指定函数
 // fn 接收索引和元素作为参数的函数
-func (x *List[T]) ForEach(fn func(index int, item T)) {
+func (x *List[T]) Range(fn func(index int, value T) bool) {
     for i, v := range x.v {
-        fn(i, v)
+        if !fn(i, v) {
+            break
+        }
     }
 }
 
 // Append 向列表末尾添加元素
-// item 要添加的元素
-func (x *List[T]) Append(item T) {
-    x.v = append(x.v, item)          // 添加元素到切片
+// value 要添加的元素
+func (x *List[T]) Append(value T) {
+    x.v = append(x.v, value)         // 添加元素到切片
     x.parent.Set(x.key, x.Marshal()) // 更新父级中的值
 }
 
