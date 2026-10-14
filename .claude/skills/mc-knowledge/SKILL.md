@@ -98,8 +98,8 @@ MapKeyType      = BaseTypeInteger | ~string
 |------|------|
 | `MessageTop[T, K]` | 顶级节点，持有 `IAdapter`；`Set/Unset` 转发给 Adapter；**adapter 为 nil 时 Set/Unset 静默忽略、`Key()` 返回 nil** |
 | `MessageSub` | 子节点，持有 `parent IMessage + key any`；`Set/Unset` 追加自身到 nestedMessages 链后向上冒泡 |
-| `List[T]` | 通用有序列表基类：`Len/IsEmpty/Values/Contains(DeepEqual)/Find/Filter/ForEach/Append/Remove(index)/Clear/Marshal` |
-| `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码；**`Remove(item T)` 按值删除**（遮蔽 `List.Remove(index)`） |
+| `List[T]` | 通用有序列表基类：`Len/IsEmpty/Values/Contains(DeepEqual)/Find/Filter/Range/Append/Remove(index)/Clear/Marshal`；**`Range(fn func(index int, value T) bool)` 回调返回 false 即中止遍历**（原 `ForEach` 已更名，与 `Map.Range` 风格一致） |
+| `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码；**`Remove(value T)` 按值删除**（遮蔽 `List.Remove(index)`） |
 | `ListMessage[T IMessage]` | 消息对象列表，带 `creator` 工厂；`AppendNewMessage()` 以当前长度为 key 创建并追加 |
 | `Map[T, V]` | 通用映射基类：`Get/Contains/Size/IsEmpty/Keys/Values/GetAll(副本)/Range/Clear/Marshal`（**无 Put/Delete**） |
 | `MapBase[T MapKeyType, V BaseType]` | 基础类型映射：`Put(key, value)` → `$set path.key`；`Delete(key)` → `$unset path.key`；实现 BSON document 解码 |
