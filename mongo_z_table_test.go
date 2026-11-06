@@ -5,8 +5,8 @@ import (
 
     "github.com/stretchr/testify/assert"
 
-    "gitea.meigushi.go/meigushi/mc"
-    "gitea.meigushi.go/meigushi/mc/pb"
+    "github.com/camry/mc"
+    "github.com/camry/mc/pb"
 )
 
 func TestMongoTable_FindOne(t *testing.T) {

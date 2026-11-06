@@ -98,8 +98,8 @@ import (
     "time"
 
     "github.com/camry/g/v2/glog"
-    "gitea.meigushi.go/meigushi/mc"
-    "gitea.meigushi.go/meigushi/mc/pb"
+    "github.com/camry/mc"
+    "github.com/camry/mc/pb"
     "go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 

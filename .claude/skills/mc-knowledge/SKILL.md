@@ -5,10 +5,10 @@ description: mc（Mongo Collector）仓库知识库——架构、类型体系�
 
 # mc 仓库知识库
 
-**项目全名**: Mongo Collector  
-**仓库路径**: `D:\project\meigushi\mc`  
-**模块名**: `gitea.meigushi.go/meigushi/mc`  
-**Go 版本**: 1.26+（`go.mod`: `go 1.26.0`）  
+**项目全名**: Mongo Collector
+**仓库路径**: `D:\project\meigushi\mc`
+**模块名**: `github.com/camry/mc`
+**Go 版本**: 1.26+（`go.mod`: `go 1.26.0`）
 **依赖**:
 - `go.mongodb.org/mongo-driver/v2` v2.9.1
 - `github.com/camry/g/v2`（`gerrors/gerror` 构造错误、`glog` 日志）

@@ -10,8 +10,8 @@ import (
     "github.com/stretchr/testify/assert"
     "go.mongodb.org/mongo-driver/v2/bson"
 
-    "gitea.meigushi.go/meigushi/mc"
-    "gitea.meigushi.go/meigushi/mc/pb"
+    "github.com/camry/mc"
+    "github.com/camry/mc/pb"
 )
 
 func TestNewAdapter(t *testing.T) {

@@ -7,7 +7,7 @@
 package pb
 
 import (
-	"gitea.meigushi.go/meigushi/mc"
+	"github.com/camry/mc"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
