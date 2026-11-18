@@ -99,7 +99,9 @@ func (x *MapMessage[T, V]) Decode(vr bson.ValueReader, _ any) error {
         if err1 != nil {
             return err1
         }
+        x.mu.Lock()
         x.v[key] = val // 将键值对添加到映射
+        x.mu.Unlock()
     }
     return nil
 }
@@ -107,6 +109,24 @@ func (x *MapMessage[T, V]) Decode(vr bson.ValueReader, _ any) error {
 // PutNewMessage 向映射中添加一个新的消息对象并返回该对象
 // key 键
 func (x *MapMessage[T, V]) PutNewMessage(key T) V {
+    x.mu.Lock()
+    defer x.mu.Unlock()
+    return x.putNewMessageLocked(key)
+}
+
+// GetOrPutNewMessage 查找指定键的消息对象，不存在则创建、存入并返回
+// key 键
+func (x *MapMessage[T, V]) GetOrPutNewMessage(key T) V {
+    x.mu.Lock()
+    defer x.mu.Unlock()
+    if v, ok := x.v[key]; ok {
+        return v
+    }
+    return x.putNewMessageLocked(key)
+}
+
+// putNewMessageLocked 在已持有锁的前提下创建并存入新的消息对象
+func (x *MapMessage[T, V]) putNewMessageLocked(key T) V {
     value := x.creator(x, key) // 创建新消息对象
     x.v[key] = value           // 添加到映射
     if v, ok := any(value).(IMarshalBsonM); ok {
@@ -118,6 +138,8 @@ func (x *MapMessage[T, V]) PutNewMessage(key T) V {
 // Delete 从映射中删除指定键的键值对
 // key 要删除的键
 func (x *MapMessage[T, V]) Delete(key T) {
+    x.mu.Lock()
+    defer x.mu.Unlock()
     delete(x.v, key) // 从映射中删除键值对
     x.Unset(key)     // 从父级中取消设置
 }

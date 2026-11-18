@@ -89,7 +89,9 @@ func (x *MapBase[T, V]) Decode(vr bson.ValueReader, _ any) error {
         if err1 != nil {
             return err1
         }
+        x.mu.Lock()
         x.v[key] = val // 将键值对添加到映射
+        x.mu.Unlock()
     }
     return nil
 }
@@ -98,6 +100,8 @@ func (x *MapBase[T, V]) Decode(vr bson.ValueReader, _ any) error {
 // key 键
 // value 值
 func (x *MapBase[T, V]) Put(key T, value V) {
+    x.mu.Lock()
+    defer x.mu.Unlock()
     x.v[key] = value  // 更新映射中的值
     x.Set(key, value) // 更新父级中的值
 }
@@ -105,6 +109,8 @@ func (x *MapBase[T, V]) Put(key T, value V) {
 // Delete 从映射中删除指定键的键值对
 // key 要删除的键
 func (x *MapBase[T, V]) Delete(key T) {
+    x.mu.Lock()
+    defer x.mu.Unlock()
     delete(x.v, key) // 从映射中删除键值对
     x.Unset(key)     // 从父级中取消设置
 }

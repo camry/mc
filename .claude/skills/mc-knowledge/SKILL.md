@@ -101,16 +101,16 @@ MapKeyType      = BaseTypeInteger | ~string
 | `List[T]` | 通用有序列表基类：`Len/IsEmpty/Values/Contains(DeepEqual)/Find/Filter/Range/Append/Remove(index)/Clear/Marshal`；**`Range(fn func(index int, value T) bool)` 回调返回 false 即中止遍历**（原 `ForEach` 已更名，与 `Map.Range` 风格一致） |
 | `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码；**`Remove(value T)` 按值删除**（遮蔽 `List.Remove(index)`） |
 | `ListMessage[T IMessage]` | 消息对象列表，带 `creator` 工厂；`AppendNewMessage()` 以当前长度为 key 创建并追加 |
-| `Map[T, V]` | 通用映射基类：`Get/Contains/Size/IsEmpty/Keys/Values/GetAll(副本)/Range/Clear/Marshal`（**无 Put/Delete**） |
-| `MapBase[T MapKeyType, V BaseType]` | 基础类型映射：`Put(key, value)` → `$set path.key`；`Delete(key)` → `$unset path.key`；实现 BSON document 解码 |
-| `MapMessage[T MapKeyType, V IMessage]` | 消息对象映射，带 `creator` 工厂：`PutNewMessage(key)` 创建、存入并 `$set` 其 Marshal 结果；`Delete(key)` |
+| `Map[T, V]` | 通用映射基类（**并发安全**，内含 `sync.RWMutex`）：`Get/Contains/Size/IsEmpty/Keys/Values/GetAll(副本)/Range/Clear/Marshal`（**无 Put/Delete**）。`Range` 在读锁内拷贝快照后于锁外遍历，回调中可安全 `Put/Delete`；因含锁，不可值拷贝 |
+| `MapBase[T MapKeyType, V BaseType]` | 基础类型映射：`Put(key, value)` → `$set path.key`；`Delete(key)` → `$unset path.key`；实现 BSON document 解码。写操作在**同一把写锁**内完成「改内存 map + `parent.Set/Unset`」，保证内存与下发顺序一致 |
+| `MapMessage[T MapKeyType, V IMessage]` | 消息对象映射，带 `creator` 工厂：`PutNewMessage(key)` 创建、存入并 `$set` 其 Marshal 结果；`GetOrPutNewMessage(key)` 存在即返回、否则创建（原子）；`Delete(key)` |
 
 ### 辅助函数（`utils_map.go`）
 
 | 函数 | 说明 |
 |------|------|
-| `MapBaseIncr(m, key, v)` / `MapBaseDecr(m, key, v)` | 数值映射增减，返回**新值**（与生成代码 `IncrXxx/DecrXxx` 一致） |
-| `MapMessageGetOrPut(m, key)` | 存在则返回，不存在则 `PutNewMessage` |
+| `MapBaseIncr(m, key, v)` / `MapBaseDecr(m, key, v)` | 数值映射增减，返回**新值**（与生成代码 `IncrXxx/DecrXxx` 一致）；在写锁内完成读改写，并发安全 |
+| `MapMessageGetOrPut(m, key)` | 委托 `MapMessage.GetOrPutNewMessage`，原子地「存在即返回，不存在即创建」 |
 
 ### 字段变更传播路径
 
