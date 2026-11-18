@@ -63,6 +63,9 @@ func (x *MongoTable[T, K]) FindMany(ids []K) ([]T, error) {
         }
         lst = append(lst, tt)
     }
+    if err = cursor.Err(); err != nil { // 游标中途出错（网络/解码错误）不能被静默吞掉
+        return nil, err
+    }
 
     return lst, nil
 }

@@ -2,6 +2,7 @@ package mc
 
 import (
     "context"
+    "errors"
     "math/rand/v2"
     "sync"
     "time"
@@ -27,6 +28,7 @@ type CollectorWorker struct {
     mu             sync.RWMutex          // mu 保护 closed 与 buffer 的关闭，写入持读锁，关闭持写锁
     closed         bool                  // closed 是否已关闭
     done           chan struct{}         // done Run 协程退出信号（剩余数据已全部写入）
+    bulkWriteFn    func([]mongo.WriteModel) error // 实际批量写入函数，测试可替换
 }
 
 // NewCollectorWorker 创建新的收集器工作实例，创建后须调用 Run 启动
@@ -50,6 +52,7 @@ func NewCollectorWorker(ctx context.Context, db *MongoDatabase, table string, op
         opt(x)
     }
     x.buffer = make(chan mongo.WriteModel, x.bufferSize)
+    x.bulkWriteFn = x.bulkWrite
     context.AfterFunc(x.ctx, x.shutdown) // 外部上下文取消时同样停止接收写入
     return x
 }
@@ -118,25 +121,73 @@ func (x *CollectorWorker) Close() {
 }
 
 // doBatchWriteModel 执行批量写入，失败时按退避策略重试，重试耗尽后记录被丢弃的模型
+//
+// 服务端明确拒绝的条目（BulkWriteException.WriteErrors）会被单独隔离并记录，
+// 其余条目立即重试且不消耗重试次数：避免一条毒丸数据（如 $set 路径冲突、类型不符）
+// 在 Ordered 默认有序写入下拖累整批正常数据被丢弃。更新操作均为 $set/$unset，可安全重复执行。
 func (x *CollectorWorker) doBatchWriteModel(batchWriteModels []mongo.WriteModel) {
     if len(batchWriteModels) == 0 {
         return
     }
-    err := x.bulkWrite(batchWriteModels)
-    for retry := 1; err != nil && retry <= x.maxRetries; retry++ {
-        if !x.sleepRetry(retry) {
-            // 关闭中断：停止重试，记录丢弃数据后返回
-            glog.Warnf("CollectorWorker Table %s Retry Interrupted By Shutdown, Drop %d Models", x.table, len(batchWriteModels))
-            x.logDropWriteModels(batchWriteModels, x.ctx.Err())
+    pending := batchWriteModels
+    retries := 0
+    for {
+        err := x.bulkWriteFn(pending)
+        if err == nil {
             return
         }
-        glog.Warn(gerror.Wrapf(err, "CollectorWorker Table %s BulkWrite Retry %d/%d", x.table, retry, x.maxRetries))
-        err = x.bulkWrite(batchWriteModels)
+        // 先隔离被服务端明确拒绝的条目，只对剩余条目重试
+        if remaining, dropped, ok := splitBulkWriteErrors(pending, err); ok {
+            glog.Error(gerror.Wrapf(err, "CollectorWorker Table %s BulkWrite Drop %d Poison Models", x.table, len(dropped)))
+            x.logDropWriteModels(dropped, err)
+            pending = remaining
+            if len(pending) == 0 {
+                return
+            }
+            continue
+        }
+        if retries >= x.maxRetries {
+            glog.Error(gerror.Wrapf(err, "CollectorWorker Table %s BulkWrite Failed After %d Retries, Drop %d Models", x.table, x.maxRetries, len(pending)))
+            x.logDropWriteModels(pending, err)
+            return
+        }
+        retries++
+        if !x.sleepRetry(retries) {
+            // 关闭中断：停止重试，记录丢弃数据后返回
+            glog.Warnf("CollectorWorker Table %s Retry Interrupted By Shutdown, Drop %d Models", x.table, len(pending))
+            x.logDropWriteModels(pending, x.ctx.Err())
+            return
+        }
+        glog.Warn(gerror.Wrapf(err, "CollectorWorker Table %s BulkWrite Retry %d/%d", x.table, retries, x.maxRetries))
     }
-    if err != nil {
-        glog.Error(gerror.Wrapf(err, "CollectorWorker Table %s BulkWrite Failed After %d Retries, Drop %d Models", x.table, x.maxRetries, len(batchWriteModels)))
-        x.logDropWriteModels(batchWriteModels, err)
+}
+
+// splitBulkWriteErrors 根据 BulkWriteException 的 WriteErrors 按下标拆分批次
+// 只有当错误是 BulkWriteException 且能定位到至少一个有效下标时才返回 ok=true
+func splitBulkWriteErrors(models []mongo.WriteModel, err error) (remaining, dropped []mongo.WriteModel, ok bool) {
+    var bwe mongo.BulkWriteException
+    if !errors.As(err, &bwe) || len(bwe.WriteErrors) == 0 {
+        return nil, nil, false
     }
+    bad := make(map[int]struct{}, len(bwe.WriteErrors))
+    for _, we := range bwe.WriteErrors {
+        if we.Index >= 0 && we.Index < len(models) {
+            bad[we.Index] = struct{}{}
+        }
+    }
+    if len(bad) == 0 {
+        return nil, nil, false
+    }
+    remaining = make([]mongo.WriteModel, 0, len(models)-len(bad))
+    dropped = make([]mongo.WriteModel, 0, len(bad))
+    for i, m := range models {
+        if _, isBad := bad[i]; isBad {
+            dropped = append(dropped, m)
+        } else {
+            remaining = append(remaining, m)
+        }
+    }
+    return remaining, dropped, true
 }
 
 // bulkWrite 执行一次批量写入

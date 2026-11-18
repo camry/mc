@@ -3,6 +3,7 @@ package mc
 import (
     "bytes"
     "reflect"
+    "slices"
     "strings"
 
     "github.com/camry/g/v2/gerrors/gerror"
@@ -41,8 +42,7 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
         return ""
     }
     var builder strings.Builder
-    for i := len(nestedMessages) - 1; i >= 0; i-- { // 从后往前遍历
-        message := nestedMessages[i]
+    for _, message := range slices.Backward(nestedMessages) { // 从后往前遍历
         if builder.Len() > 0 {
             builder.WriteString(".") // 添加分隔符
         }
@@ -55,23 +55,29 @@ func toNestedMessageKey(nestedMessages []IMessage) string {
 // key 字符串形式的键
 // kind 目标类型种类
 func toMapKey[T MapKeyType](key string, kind reflect.Kind) (T, error) {
-    var k any
+    var (
+        t   T
+        k   any
+        err error
+    )
     // 获取目标类型
     targetType := reflect.TypeFor[T]()
     switch kind {
     case reflect.Int32:
-        k = cast.ToInt32(key)
+        k, err = cast.ToInt32E(key)
     case reflect.Int64:
-        k = cast.ToInt64(key)
+        k, err = cast.ToInt64E(key)
     case reflect.Uint32:
-        k = cast.ToUint32(key)
+        k, err = cast.ToUint32E(key)
     case reflect.Uint64:
-        k = cast.ToUint64(key)
+        k, err = cast.ToUint64E(key)
     case reflect.String:
         k = key
     default:
-        var t T
         return t, gerror.Newf("unsupported map key type: %s", kind)
+    }
+    if err != nil {
+        return t, gerror.Wrapf(err, "invalid map key %q for %s", key, kind)
     }
     return reflect.ValueOf(k).Convert(targetType).Interface().(T), nil
 }

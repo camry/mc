@@ -2,6 +2,7 @@ package mc
 
 import (
     "encoding/base64"
+    "math"
     "reflect"
 
     "github.com/camry/g/v2/gerrors/gerror"
@@ -60,7 +61,13 @@ func BaseDecode[T BaseType](vr bson.ValueReader) (T, error) {
 // vr bson值读取器
 func Float32Decode(vr bson.ValueReader) (float32, error) {
     v, err := Float64Decode(vr) // 先解码为float64再转换
-    return cast.ToFloat32(v), err
+    if err != nil {
+        return 0, err
+    }
+    if !math.IsNaN(v) && !math.IsInf(v, 0) && (v > math.MaxFloat32 || v < -math.MaxFloat32) {
+        return 0, gerror.Newf("value %v overflows float32", v)
+    }
+    return cast.ToFloat32(v), nil
 }
 
 // Float64Decode 从bson值读取器中解码float64值
@@ -91,14 +98,20 @@ func Float64Decode(vr bson.ValueReader) (float64, error) {
 // vr bson值读取器
 func Int32Decode(vr bson.ValueReader) (int32, error) {
     v, err := Int64Decode(vr) // 先解码为int64再转换
-    return cast.ToInt32(v), err
+    if err != nil {
+        return 0, err
+    }
+    if v < math.MinInt32 || v > math.MaxInt32 {
+        return 0, gerror.Newf("value %d overflows int32", v)
+    }
+    return int32(v), nil
 }
 
 // EnumDecode 从bson值读取器中解码枚举值
 // vr bson值读取器
 // T 枚举类型
 func EnumDecode[T ~int32](vr bson.ValueReader) (T, error) {
-    v, err := Int64Decode(vr) // 先解码为int64再转换
+    v, err := Int32Decode(vr) // 先解码为int32（带范围校验）再转换
     return T(v), err
 }
 
@@ -116,7 +129,13 @@ func Int64Decode(vr bson.ValueReader) (int64, error) {
         return cast.ToInt64(v), err
     case bson.TypeDouble:
         v, err := vr.ReadDouble()
-        return cast.ToInt64(v), err
+        if err != nil {
+            return 0, err
+        }
+        if math.IsNaN(v) || math.IsInf(v, 0) || v < math.MinInt64 || v >= math.MaxInt64 {
+            return 0, gerror.Newf("value %v overflows int64", v)
+        }
+        return int64(v), nil
     case bson.TypeNull:
         return 0, vr.ReadNull()
     case bson.TypeUndefined:
@@ -130,14 +149,26 @@ func Int64Decode(vr bson.ValueReader) (int64, error) {
 // vr bson值读取器
 func UInt32Decode(vr bson.ValueReader) (uint32, error) {
     v, err := Int64Decode(vr) // 先解码为int64再转换
-    return cast.ToUint32(v), err
+    if err != nil {
+        return 0, err
+    }
+    if v < 0 || v > math.MaxUint32 {
+        return 0, gerror.Newf("value %d overflows uint32", v)
+    }
+    return uint32(v), nil
 }
 
 // UInt64Decode 从bson值读取器中解码uint64值
 // vr bson值读取器
 func UInt64Decode(vr bson.ValueReader) (uint64, error) {
     v, err := Int64Decode(vr) // 先解码为int64再转换
-    return cast.ToUint64(v), err
+    if err != nil {
+        return 0, err
+    }
+    if v < 0 {
+        return 0, gerror.Newf("negative value %d for uint64", v)
+    }
+    return uint64(v), nil
 }
 
 // BoolDecode 从bson值读取器中解码bool值

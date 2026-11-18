@@ -129,6 +129,10 @@ func main() {
     // 创建 A 对象实例
     a := pb.NewA(adapter, 2)
 
+    // 加载已有文档；文档不存在时 Find 会自动插入一条完整默认结构的文档。
+    // 必须先 Find：Adapter 生成的是未开启 upsert 的 UpdateOne，文档不存在时写入会被静默丢弃。
+    _ = db.Find(a)
+
     // 更新嵌套字段
     a.SetAUsername("camry")
     a.SetANicknameAlias("Camry.Chen")

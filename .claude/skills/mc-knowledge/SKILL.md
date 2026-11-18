@@ -219,9 +219,9 @@ collector := mc.NewCollector(ctx, db)
 
 - 每张表懒初始化一个 `CollectorWorker`（首次 `Write` 时经 `getOrCreateWorker` 创建并 `go worker.Run()`；**二次检查**避免并发首写同表创建多个 worker）
 - `CollectorWorkerOption` 仅在该表 worker **首次创建时生效**，之后传入的选项被忽略
-- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）、writeTimeout（默认 10s）、maxRetries（默认 3）、retryBaseDelay（默认 100ms）、retryMaxDelay（默认 2s）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval/WriteTimeout/MaxRetries/RetryBaseDelay/RetryMaxDelay` 调整
+- `CollectorWorker`：buffer（默认 10000）、batchSize（默认 100）、flushInterval（默认 100ms）、writeTimeout（默认 10s）、maxRetries（默认 3）、retryBaseDelay（默认 5s）、retryMaxDelay（默认 3h）；可用 `WithCollectorWorkerBufferSize/BatchSize/FlushInterval/WriteTimeout/MaxRetries/RetryBaseDelay/RetryMaxDelay` 调整
 - `Run()` goroutine：ticker 或 batchSize 触发 `BulkWrite`；缓冲区通道关闭且剩余数据写完才退出（`defer close(done)`）
-- `doBatchWriteModel`：`BulkWrite` 用 `context.WithoutCancel(db.Context())` + 可选 `writeTimeout` 超时（<=0 不限制）；**失败即重试**（任何错误都重试）：指数退避 `retryBaseDelay*2^(n-1)` 封顶 `retryMaxDelay`、再加抖动 `[d/2, d]`，退避等待可被 `ctx.Done()` 打断；重试耗尽后逐条 `%+v` 记录被丢弃的模型（不静默丢）
+- `doBatchWriteModel`：`BulkWrite` 用 `context.WithoutCancel(db.Context())` + 可选 `writeTimeout` 超时（<=0 不限制）；**失败即重试**，分两类：①`mongo.BulkWriteException.WriteErrors` 能定位的下标视为**毒丸条目**，只丢弃并逐条记录它们，其余条目立即重试且不消耗重试次数（默认 `Ordered=true`，若不隔离，一条坏数据会让整批正常写入一并被丢弃；`$set/$unset` 幂等，重试已成功条目安全）；②其他错误（网络/超时/写关注）整批重试：指数退避 `retryBaseDelay*2^(n-1)` 封顶 `retryMaxDelay`、再加抖动 `[d/2, d]`，退避等待可被 `ctx.Done()` 打断；重试耗尽后逐条 `%+v` 记录被丢弃的模型（不静默丢）。默认 3 次重试的退避为 5s/10s/20s，`retryMaxDelay=3h` 实际不可达
 - `Close()`：置 closed、清空 worker 映射，并发调用各 worker 的 `Close()`（`sync.WaitGroup.Go`，Go 1.26）并 `wg.Wait()` **阻塞等待**所有剩余数据写完；关闭后 `Write` 被丢弃并告警
 - `CollectorWorker.Close()`：`cancel()` → `shutdown()`（close buffer）→ `<-done` 阻塞等待，可重复调用
 
@@ -242,6 +242,8 @@ MongoClient.Close()               // Disconnect
 - `FindOne(_id=top.Key())`
 - 若 `ErrNoDocuments` → `InsertOne(top.Marshal())`（自动创建文档）
 - 否则用 `decode.Decode` 反序列化到 top
+
+**新文档必须先 `Find`**：Adapter 生成的是 `UpdateOne(filter {_id})` 且**未开启 upsert**。若目标文档不存在就 `Set`，MongoDB 返回 matched=0、`BulkWrite` 不报错，所有写入被**静默丢弃**。因此对「可能是新文档」的对象，先调 `db.Find(top)`（不存在会自动插入含完整默认结构的文档），再改字段。
 
 ---
 

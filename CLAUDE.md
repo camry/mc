@@ -46,13 +46,13 @@ protoc --mc_out=./pb pb/*.proto   # 重新生成 pb/*.pb.mc.go
 关键组件：
 - `define.go` —— 类型约束（`BaseType`、`MapKeyType`）、枚举、全部接口。
 - `adapter*.go` —— 一个 Adapter 只绑定一个文档（顶级对象 + key）；聚合 `$set`/`$unset`，遇到父子键冲突（`"a"` 与 `"a.b"`）先 flush 再拆分。
-- `collector*.go` —— 每张表懒创建一个 `CollectorWorker`（二次检查）；BulkWrite 带重试（`retryBaseDelay*2^(n-1)` 封顶 + 抖动）和按 worker 的批量刷新。
+- `collector*.go` —— 每张表懒创建一个 `CollectorWorker`（二次检查）；BulkWrite 带重试（`retryBaseDelay*2^(n-1)` 封顶 + 抖动，默认 5s 起）和按 worker 的批量刷新；`BulkWriteException` 能定位的下标按“毒丸”隔离（只丢该条，其余立即重试且不消耗重试次数）。
 - `mongo*.go` —— client/database/collection 封装，以及只读的 `MongoTable[T,K]`（其中创建的对象**没有 Adapter**：`Set` 只改内存，`Key()` 返回 nil）。
 - 容器写入粒度：列表操作整体重写数组（`$set x.key = Marshal()`）；Map 的 Put/Delete 只操作单个键（`$set`/`$unset path.key`），`Map.Clear` 整体重写映射。
 - `utils_map.go` —— 原子的 `MapBaseIncr/MapBaseDecr`、`MapMessageGetOrPut`（均在锁内完成）。
 - `Map`/`List` 均内嵌 `sync.RWMutex`（并发读写安全；`Range`/`Find`/`Filter` 遍历快照，`Values()` 返回副本）。因此 `MapBase`/`MapMessage`/`ListBase`/`ListMessage` 绝不可按值拷贝 —— 始终使用指针。
 
-生命周期规则：每个文档需要独立的 `Adapter`；必须**先关闭所有 Adapter，再关闭 Collector**（`Adapter.Close()` → `Collector.Close()`），二者都会阻塞直到缓冲写入刷出。BulkWrite 失败会重试，重试耗尽后仅记录日志并丢弃 —— `Close` 成功不代表数据已落库。
+生命周期规则：每个文档需要独立的 `Adapter`；**新文档必须先 `db.Find(top)`**（文档不存在时它插入含完整默认结构的文档）——Adapter 写入是未开 upsert 的 `UpdateOne`，文档不存在时所有写入会被静默丢弃（matched=0 不报错）。必须**先关闭所有 Adapter，再关闭 Collector**（`Adapter.Close()` → `Collector.Close()`），二者都会阻塞直到缓冲写入刷出。BulkWrite 失败会重试，重试耗尽后仅记录日志并丢弃 —— `Close` 成功不代表数据已落库。
 
 深度参考：`.claude/skills/mc-knowledge/SKILL.md`（与代码保持同步；修改解码、Adapter 或容器行为前先查阅）。
 
