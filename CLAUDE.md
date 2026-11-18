@@ -50,7 +50,7 @@ protoc --mc_out=./pb pb/*.proto   # 重新生成 pb/*.pb.mc.go
 - `mongo*.go` —— client/database/collection 封装，以及只读的 `MongoTable[T,K]`（其中创建的对象**没有 Adapter**：`Set` 只改内存，`Key()` 返回 nil）。
 - 容器写入粒度：列表操作整体重写数组（`$set x.key = Marshal()`）；Map 的 Put/Delete 只操作单个键（`$set`/`$unset path.key`），`Map.Clear` 整体重写映射。
 - `utils_map.go` —— 原子的 `MapBaseIncr/MapBaseDecr`、`MapMessageGetOrPut`（均在锁内完成）。
-- `Map` 内嵌 `sync.RWMutex`（并发读写安全；`Range` 遍历快照）。因此 `MapBase`/`MapMessage` 绝不可按值拷贝 —— 始终使用指针。
+- `Map`/`List` 均内嵌 `sync.RWMutex`（并发读写安全；`Range`/`Find`/`Filter` 遍历快照，`Values()` 返回副本）。因此 `MapBase`/`MapMessage`/`ListBase`/`ListMessage` 绝不可按值拷贝 —— 始终使用指针。
 
 生命周期规则：每个文档需要独立的 `Adapter`；必须**先关闭所有 Adapter，再关闭 Collector**（`Adapter.Close()` → `Collector.Close()`），二者都会阻塞直到缓冲写入刷出。BulkWrite 失败会重试，重试耗尽后仅记录日志并丢弃 —— `Close` 成功不代表数据已落库。
 

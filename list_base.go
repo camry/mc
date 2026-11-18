@@ -82,17 +82,21 @@ func (x *ListBase[T]) Decode(vr bson.ValueReader, _ any) error {
         if err1 != nil {
             return err1
         }
+        x.mu.Lock()
         x.v = append(x.v, val) // 添加解码后的值到列表
+        x.mu.Unlock()
     }
     return nil
 }
 
-// Remove 根据值移除列表中的元素
+// Remove 根据值移除列表中的元素（查找与删除在同一写锁内完成）
 // value 要移除的元素
 func (x *ListBase[T]) Remove(value T) {
+    x.mu.Lock()
+    defer x.mu.Unlock()
     index := slices.Index(x.v, value) // 查找元素索引
     if index == -1 {
         return // 元素不存在，直接返回
     }
-    x.List.Remove(index) // 调用父类的 Remove 方法
+    x.removeLocked(index) // 调用父类的删除逻辑
 }

@@ -98,9 +98,9 @@ MapKeyType      = BaseTypeInteger | ~string
 |------|------|
 | `MessageTop[T, K]` | 顶级节点，持有 `IAdapter`；`Set/Unset` 转发给 Adapter；**adapter 为 nil 时 Set/Unset 静默忽略、`Key()` 返回 nil** |
 | `MessageSub` | 子节点，持有 `parent IMessage + key any`；`Set/Unset` 追加自身到 nestedMessages 链后向上冒泡 |
-| `List[T]` | 通用有序列表基类：`Len/IsEmpty/Values/Contains(DeepEqual)/Find/Filter/Range/Append/Remove(index)/Clear/Marshal`；**`Range(fn func(index int, value T) bool)` 回调返回 false 即中止遍历**（原 `ForEach` 已更名，与 `Map.Range` 风格一致） |
-| `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码；**`Remove(value T)` 按值删除**（遮蔽 `List.Remove(index)`） |
-| `ListMessage[T IMessage]` | 消息对象列表，带 `creator` 工厂；`AppendNewMessage()` 以当前长度为 key 创建并追加 |
+| `List[T]` | 通用有序列表基类（**并发安全**，内含 `sync.RWMutex`）：`Len/IsEmpty/Values(副本)/Contains(DeepEqual)/Find/Filter/Range/Append/Remove(index)/Clear/Marshal`；**`Range(fn func(index int, value T) bool)` 回调返回 false 即中止遍历**（原 `ForEach` 已更名，与 `Map.Range` 风格一致）。`Find/Filter/Range` 在锁内拷贝快照后于锁外遍历，回调中可安全写列表；写操作在**同一把写锁**内完成「改切片 + `parent.Set`」；因含锁，不可值拷贝 |
+| `ListBase[T BaseType]` | 基础类型列表，实现 BSON 数组解码；**`Remove(value T)` 按值删除**（遮蔽 `List.Remove(index)`，查找与删除在同一写锁内原子完成） |
+| `ListMessage[T IMessage]` | 消息对象列表，带 `creator` 工厂；`AppendNewMessage()` 以当前长度为 key 创建并追加（创建与追加原子完成） |
 | `Map[T, V]` | 通用映射基类（**并发安全**，内含 `sync.RWMutex`）：`Get/Contains/Size/IsEmpty/Keys/Values/GetAll(副本)/Range/Clear/Marshal`（**无 Put/Delete**）。`Range` 在读锁内拷贝快照后于锁外遍历，回调中可安全 `Put/Delete`；因含锁，不可值拷贝 |
 | `MapBase[T MapKeyType, V BaseType]` | 基础类型映射：`Put(key, value)` → `$set path.key`；`Delete(key)` → `$unset path.key`；实现 BSON document 解码。写操作在**同一把写锁**内完成「改内存 map + `parent.Set/Unset`」，保证内存与下发顺序一致 |
 | `MapMessage[T MapKeyType, V IMessage]` | 消息对象映射，带 `creator` 工厂：`PutNewMessage(key)` 创建、存入并 `$set` 其 Marshal 结果；`GetOrPutNewMessage(key)` 存在即返回、否则创建（原子）；`Delete(key)` |
@@ -364,3 +364,5 @@ _ = collector.Close()
 10. **同名结构体冲突**：`decodeMap` 以不含包名的结构体名为键，跨包同名 message 会覆盖彼此的解码器。
 
 11. **MapBaseIncr/Decr 返回新值**，与生成代码 `IncrXxx/DecrXxx` 一致（此前返回旧值，已修复）。
+
+12. **容器并发安全、不可值拷贝**：`Map`/`List` 均内嵌 `sync.RWMutex`，`MapBase`/`MapMessage`/`ListBase`/`ListMessage` 因按值内嵌它而不可拷贝（`go vet` copylocks 可查），务必用指针。`Range`/`Find`/`Filter` 遍历快照（回调内可安全写容器），`Values()` 返回副本。`List.Set/Unset` 向上冒泡时不取列表锁，锁序单向（父容器锁 → 子容器锁），不会死锁。

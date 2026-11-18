@@ -91,14 +91,18 @@ func (x *ListMessage[T]) Decode(vr bson.ValueReader, _ any) error {
         if err1 != nil {
             return err1
         }
+        x.mu.Lock()
         x.v = append(x.v, val) // 添加解码后的消息对象到列表
+        x.mu.Unlock()
     }
     return nil
 }
 
-// AppendNewMessage 向列表追加一个新的消息对象并返回该对象
+// AppendNewMessage 向列表追加一个新的消息对象并返回该对象（创建与追加原子完成）
 func (x *ListMessage[T]) AppendNewMessage() T {
-    value := x.creator(x, x.Len()) // 使用当前长度作为键创建新消息对象
-    x.Append(value)                // 添加到列表
+    x.mu.Lock()
+    defer x.mu.Unlock()
+    value := x.creator(x, len(x.v)) // 使用当前长度作为键创建新消息对象
+    x.appendLocked(value)          // 添加到列表并同步父级
     return value                   // 返回新创建的对象
 }
